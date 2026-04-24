@@ -1,0 +1,72 @@
+package com.megaproject.jobevent.controller;
+
+import com.megaproject.jobevent.dto.request.JobRequest;
+import com.megaproject.jobevent.dto.response.JobResponse;
+import com.megaproject.jobevent.service.JobService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/jobs")
+@RequiredArgsConstructor
+public class JobController {
+
+    private final JobService jobService;
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
+    public ResponseEntity<JobResponse> create(
+            @Valid @RequestBody JobRequest req,
+            @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getSubject();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(jobService.create(req, userId));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<JobResponse> getById(@PathVariable String id) {
+        return ResponseEntity.ok(jobService.getById(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<JobResponse>> getAll() {
+        return ResponseEntity.ok(jobService.getAllActive());
+    }
+
+    @GetMapping("/my")
+    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
+    public ResponseEntity<List<JobResponse>> getMyJobs(
+            @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(jobService.getByCreator(jwt.getSubject()));
+    }
+
+    @GetMapping("/company/{name}")
+    public ResponseEntity<List<JobResponse>> getByCompany(@PathVariable String name) {
+        return ResponseEntity.ok(jobService.getByCompany(name));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
+    public ResponseEntity<JobResponse> update(
+            @PathVariable String id,
+            @Valid @RequestBody JobRequest req,
+            @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(jobService.update(id, req, jwt.getSubject(),
+                jwt.getClaimAsString("role")));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> delete(@PathVariable String id) {
+        jobService.softDelete(id);
+        return ResponseEntity.ok(Map.of("success", true, "message", "Job deactivated"));
+    }
+}

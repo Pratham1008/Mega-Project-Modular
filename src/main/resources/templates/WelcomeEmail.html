@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Verification - KITCOEK Alumni Portal</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #ffffff; font-family: 'Times New Roman', serif; color: #000000; line-height: 1.6; }
+
+        .container { width: 100%; max-width: 550px; margin: 40px auto; background-color: #ffffff; border: 1px solid #000000; /* Minimal border for structure */ padding: 0; }
+
+        .header { padding: 15px 30px 5px 30px; text-align: left; font-size: 18px; font-weight: bold; border-bottom: 1px solid #cccccc; }
+
+        .content { padding: 30px; text-align: left; }
+        .greeting { font-size: 16px; margin-top: 0; margin-bottom: 20px; color: #000000; }
+        .instruction { margin-bottom: 15px; color: #333333; }
+
+        .otp-box { background-color: #f7f7f7; border: 1px solid #cccccc; padding: 15px; text-align: center; margin: 30px 0; border-radius: 2px; }
+        .otp-label { color: #000000; font-weight: bold; font-size: 14px; display: block; margin-bottom: 5px; }
+        .otp-code { font-family: monospace; font-size: 28px; font-weight: bold; color: #000000; display: block; letter-spacing: 2px; }
+
+        .footer { border-top: 1px solid #cccccc; padding: 20px 30px; text-align: center; font-size: 11px; color: #666666; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        KITCOEK Alumni Association
+    </div>
+
+    <div class="content">
+
+        <p class="greeting" th:text="${name} ? 'Dear ' + ${name} + ',' : 'Dear Member,'">Dear Member,</p>
+
+        <p class="instruction">Welcome to the official Alumni Portal! To complete your registration and secure your account, please verify your email address immediately.</p>
+
+        <div class="otp-box">
+            <span class="otp-label">ONE-TIME VERIFICATION CODE</span>
+            <span class="otp-code" th:text="${otpCode}">123456</span>
+        </div>
+
+        <p class="instruction">For security, this code is valid for 10 minutes. Please enter it in the portal to continue setting up your profile.</p>
+
+        <p class="instruction">If you did not initiate this action, please contact the IT department immediately.</p>
+    </div>
+
+    <div class="footer">
+        <p>&copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> KITCOEK Alumni Association.</p>
+        <p>This email was sent to <span th:text="${userEmail}"></span>.</p>
+    </div>
+</div>
+</body>
+</html>
