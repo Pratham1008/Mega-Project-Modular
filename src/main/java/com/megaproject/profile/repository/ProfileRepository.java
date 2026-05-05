@@ -22,6 +22,8 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
 
     List<ProfileDocument> findByProfileTypeAndDeletedFalse(ProfileType profileType);
 
+    List<ProfileDocument> findByProfileTypeAndDeletedFalseAndPassingYearLessThanEqual(ProfileType profileType, int passingYear);
+
     List<ProfileDocument> findByDeletedFalse();
 
     long countByProfileTypeAndDeletedFalseAndApprovedTrue(ProfileType profileType);

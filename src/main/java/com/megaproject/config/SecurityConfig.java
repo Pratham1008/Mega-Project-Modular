@@ -46,8 +46,11 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()           // WebSocket handshake
                 .requestMatchers(HttpMethod.GET, "/profiles/count").permitAll()
+                .requestMatchers(HttpMethod.GET, "/profiles/map").permitAll()   // Alumni world map
                 .requestMatchers(HttpMethod.GET, "/jobs/**", "/events/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/donations").permitAll()      // Public donation totals
                 .requestMatchers("/uploads/**").permitAll()
                 .anyRequest().authenticated()
             )
@@ -63,7 +66,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of("http://localhost:3000","http://localhost:5173","https://alumniconnect-lovat.vercel.app"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
         configuration.setAllowCredentials(true);
 

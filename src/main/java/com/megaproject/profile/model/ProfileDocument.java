@@ -43,6 +43,7 @@ public class ProfileDocument {
     private String fullName;
 
     private String phone;
+    private String bloodGroup;
 
     @TextIndexed(weight = 2)
     private String department;

@@ -3,7 +3,9 @@ package com.megaproject.profile.controller;
 import com.megaproject.profile.dto.request.*;
 import com.megaproject.profile.dto.response.*;
 import com.megaproject.profile.exception.UnauthorizedProfileAccessException;
+import com.megaproject.profile.model.ProfileDocument;
 import com.megaproject.profile.model.ProfileType;
+import com.megaproject.profile.repository.ProfileRepository;
 import com.megaproject.profile.service.AlumniSearchService;
 import com.megaproject.profile.service.ProfileService;
 import jakarta.validation.Valid;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/profiles")
@@ -22,6 +25,7 @@ import java.util.Map;
 public class ProfileController {
 
     private final ProfileService profileService;
+    private final ProfileRepository profileRepository;
     private final AlumniSearchService alumniSearchService;
 
     // ---- Educational (Student / Alumni) ----
@@ -99,6 +103,32 @@ public class ProfileController {
     @PatchMapping("/{userId}/approve")
     public ResponseEntity<EducationalProfileResponse> approve(@PathVariable String userId) {
         return ResponseEntity.ok(profileService.approveProfile(userId));
+    }
+
+    // ---- World Map ----
+
+    /**
+     * Lightweight endpoint returning profiles that have a non-null location.
+     * Used by the frontend world map to display alumni pins.
+     * Public — no auth required.
+     */
+    @GetMapping("/map")
+    public ResponseEntity<List<Map<String, Object>>> mapProfiles() {
+        List<Map<String, Object>> pins = profileRepository.findByDeletedFalse()
+                .stream()
+                .filter(p -> p.getLocation() != null && !p.getLocation().isBlank())
+                .map(p -> Map.<String, Object>of(
+                        "userId",     p.getUserId(),
+                        "fullName",   p.getFullName() != null ? p.getFullName() : "",
+                        "photoUrl",   p.getPhotoUrl() != null ? p.getPhotoUrl() : "",
+                        "location",   p.getLocation(),
+                        "department", p.getDepartment() != null ? p.getDepartment() : "",
+                        "profileType",p.getProfileType() != null ? p.getProfileType().name() : "",
+                        "company",    p.getCompany() != null ? p.getCompany() : "",
+                        "passingYear",p.getPassingYear() != null ? p.getPassingYear() : 0
+                ))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(pins);
     }
 
     // ---- Alumni Search (MongoDB Text Search) ----

@@ -27,6 +27,7 @@ public interface ProfileMapper {
     @Mapping(target = "deleted", constant = "false")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "bloodGroup", ignore = true)
     @Mapping(target = "registrationNumber", ignore = true)
     @Mapping(target = "admissionYear", ignore = true)
     @Mapping(target = "passingYear", ignore = true)
@@ -61,6 +62,8 @@ public interface ProfileMapper {
     // ---- Update existing document from EducationalProfileRequest (ignore nulls) ----
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "email", ignore = true)               // immutable after creation
+    @Mapping(target = "registrationNumber", ignore = true) // immutable after creation
     @Mapping(target = "profileType", ignore = true)
     @Mapping(target = "approved", ignore = true)
     @Mapping(target = "deleted", ignore = true)
@@ -78,6 +81,7 @@ public interface ProfileMapper {
     @Mapping(target = "deleted", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "bloodGroup", ignore = true)
     @Mapping(target = "registrationNumber", ignore = true)
     @Mapping(target = "admissionYear", ignore = true)
     @Mapping(target = "passingYear", ignore = true)

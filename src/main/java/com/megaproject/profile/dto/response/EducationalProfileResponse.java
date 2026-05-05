@@ -13,6 +13,7 @@ public class EducationalProfileResponse {
     private String email;
     private String department;
     private String phone;
+    private String bloodGroup;
     private String photoUrl;
     private ProfileType profileType;
     private AddressResponse address;

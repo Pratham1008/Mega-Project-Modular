@@ -23,6 +23,7 @@ public class EducationalProfileRequest {
     private String department;
 
     private String phone;
+    private String bloodGroup;
     private String photoUrl;
 
     @Valid
@@ -51,5 +52,7 @@ public class EducationalProfileRequest {
     // Alumni employment info
     private String jobTitle;
     private String company;
+
+    @NotBlank(message = "Location is required (e.g. 'Kolhapur, Maharashtra')")
     private String location;
 }
