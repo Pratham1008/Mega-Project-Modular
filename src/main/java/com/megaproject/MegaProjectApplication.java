@@ -10,7 +10,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableMongoRepositories(basePackages = {
         "com.megaproject.auth.repository",
         "com.megaproject.profile.repository",
-        "com.megaproject.jobevent.repository"
+        "com.megaproject.jobevent.repository",
+        "com.megaproject.chat.repository",
+        "com.megaproject.donation.repository"
 })
 @EnableAsync
 @EnableScheduling
