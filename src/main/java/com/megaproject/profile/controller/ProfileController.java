@@ -105,16 +105,14 @@ public class ProfileController {
         return ResponseEntity.ok(profileService.approveProfile(userId));
     }
 
-    // ---- World Map ----
-
     /**
-     * Lightweight endpoint returning profiles that have a non-null location.
+     * Lightweight endpoint returning ALUMNI profiles that have a non-null location.
      * Used by the frontend world map to display alumni pins.
-     * Public — no auth required.
+     * Public — no auth required. Only ALUMNI are shown.
      */
     @GetMapping("/map")
     public ResponseEntity<List<Map<String, Object>>> mapProfiles() {
-        List<Map<String, Object>> pins = profileRepository.findByDeletedFalse()
+        List<Map<String, Object>> pins = profileRepository.findByProfileTypeAndDeletedFalse(ProfileType.ALUMNI)
                 .stream()
                 .filter(p -> p.getLocation() != null && !p.getLocation().isBlank())
                 .map(p -> Map.<String, Object>of(

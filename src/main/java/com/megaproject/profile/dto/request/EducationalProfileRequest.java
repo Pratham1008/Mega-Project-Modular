@@ -24,6 +24,7 @@ public class EducationalProfileRequest {
 
     private String phone;
     private String bloodGroup;
+    private String dateOfBirth;
     private String photoUrl;
 
     @Valid

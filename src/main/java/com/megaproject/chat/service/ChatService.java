@@ -19,12 +19,22 @@ public class ChatService {
 
     private final ConversationRepository conversationRepo;
     private final ChatMessageRepository messageRepo;
+    private final ConnectionRepository connectionRepo;
     private final ProfileRepository profileRepo;
 
     // ── Conversations ─────────────────────────────────────────────────────
 
-    /** Get or create a DM conversation between two users */
+    /**
+     * Get or create a DM conversation between two users.
+     * REQUIRES: the two users must have an ACCEPTED connection.
+     */
     public Conversation getOrCreateDm(String requesterId, String otherUserId) {
+        // Gate: must be connected
+        boolean connected = connectionRepo.findAcceptedConnection(requesterId, otherUserId).isPresent();
+        if (!connected) {
+            throw new IllegalStateException("Cannot start a conversation — users are not connected. Send a connection request first.");
+        }
+
         // Check existing DM
         Optional<Conversation> existing = conversationRepo
                 .findByGroupFalseAndParticipantIdsContainingAndParticipantIdsContaining(

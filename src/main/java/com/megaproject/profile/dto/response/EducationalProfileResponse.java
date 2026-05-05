@@ -14,6 +14,7 @@ public class EducationalProfileResponse {
     private String department;
     private String phone;
     private String bloodGroup;
+    private String dateOfBirth;
     private String photoUrl;
     private ProfileType profileType;
     private AddressResponse address;

@@ -7,6 +7,7 @@ import com.megaproject.profile.repository.ProfileRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +24,10 @@ public class DonationController {
 
     /**
      * Submit a donation (mock — always succeeds).
-     * Returns the saved Donation with a generated paymentRef.
+     * Only ALUMNI can donate.
      */
     @PostMapping
+    @PreAuthorize("hasRole('ALUMNI')")
     public ResponseEntity<Donation> donate(
             @Valid @RequestBody DonationRequest req,
             @AuthenticationPrincipal Jwt jwt) {

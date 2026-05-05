@@ -44,6 +44,7 @@ public class ProfileDocument {
 
     private String phone;
     private String bloodGroup;
+    private String dateOfBirth;  // stored as "DD/MM/YYYY" string
 
     @TextIndexed(weight = 2)
     private String department;
