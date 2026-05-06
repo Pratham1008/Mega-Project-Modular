@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.*;
 
-/**
- * LinkedIn-style connection management.
- * Users must be connected (ACCEPTED) before they can chat.
- */
 @RestController
 @RequestMapping("/connections")
 @RequiredArgsConstructor
@@ -24,8 +20,6 @@ public class ConnectionController {
 
     private final ConnectionRepository connectionRepo;
     private final ProfileRepository profileRepo;
-
-    // ── Send connection request ────────────────────────────────────────────────
 
     @PostMapping("/{receiverId}")
     public ResponseEntity<?> sendRequest(
@@ -37,7 +31,6 @@ public class ConnectionController {
             return ResponseEntity.badRequest().body(Map.of("error", "Cannot connect with yourself"));
         }
 
-        // Check if connection already exists
         Optional<Connection> existing = connectionRepo.findByUsers(requesterId, receiverId);
         if (existing.isPresent()) {
             Connection c = existing.get();
@@ -47,7 +40,6 @@ public class ConnectionController {
             if (c.getStatus() == ConnectionStatus.PENDING) {
                 return ResponseEntity.ok(Map.of("message", "Request already pending", "connection", c));
             }
-            // REJECTED — allow re-request by resetting
             c.setStatus(ConnectionStatus.PENDING);
             c.setRequesterId(requesterId);
             c.setReceiverId(receiverId);
@@ -65,8 +57,6 @@ public class ConnectionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(connectionRepo.save(conn));
     }
 
-    // ── Accept a pending request ──────────────────────────────────────────────
-
     @PatchMapping("/{connectionId}/accept")
     public ResponseEntity<?> accept(
             @PathVariable String connectionId,
@@ -74,16 +64,12 @@ public class ConnectionController {
         return respondToRequest(connectionId, jwt.getSubject(), ConnectionStatus.ACCEPTED);
     }
 
-    // ── Reject a pending request ──────────────────────────────────────────────
-
     @PatchMapping("/{connectionId}/reject")
     public ResponseEntity<?> reject(
             @PathVariable String connectionId,
             @AuthenticationPrincipal Jwt jwt) {
         return respondToRequest(connectionId, jwt.getSubject(), ConnectionStatus.REJECTED);
     }
-
-    // ── Get connection status between me and another user ─────────────────────
 
     @GetMapping("/status/{otherUserId}")
     public ResponseEntity<Map<String, Object>> status(
@@ -102,37 +88,30 @@ public class ConnectionController {
         return ResponseEntity.ok(result);
     }
 
-    // ── Pending requests received by me ───────────────────────────────────────
-
     @GetMapping("/pending")
-    public ResponseEntity<List<Connection>> pendingRequests(
-            @AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<List<Connection>> pendingRequests(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(
                 connectionRepo.findByReceiverIdAndStatus(jwt.getSubject(), ConnectionStatus.PENDING));
     }
 
-    // ── My accepted connections ───────────────────────────────────────────────
-
-    @GetMapping("/accepted")
-    public ResponseEntity<List<Connection>> myConnections(
-            @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(
-                connectionRepo.findAllAcceptedForUser(jwt.getSubject()));
+    @GetMapping("/pending/count")
+    public ResponseEntity<Map<String, Long>> pendingCount(@AuthenticationPrincipal Jwt jwt) {
+        long count = connectionRepo.findByReceiverIdAndStatus(jwt.getSubject(), ConnectionStatus.PENDING).size();
+        return ResponseEntity.ok(Map.of("count", count));
     }
 
-    // ── Check if two users are connected (used by chat to gate DMs) ───────────
+    @GetMapping("/accepted")
+    public ResponseEntity<List<Connection>> myConnections(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(connectionRepo.findAllAcceptedForUser(jwt.getSubject()));
+    }
 
     @GetMapping("/check/{otherUserId}")
     public ResponseEntity<Map<String, Boolean>> isConnected(
             @PathVariable String otherUserId,
             @AuthenticationPrincipal Jwt jwt) {
-        boolean connected = connectionRepo
-                .findAcceptedConnection(jwt.getSubject(), otherUserId)
-                .isPresent();
+        boolean connected = connectionRepo.findAcceptedConnection(jwt.getSubject(), otherUserId).isPresent();
         return ResponseEntity.ok(Map.of("connected", connected));
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private ResponseEntity<?> respondToRequest(String connectionId, String userId, ConnectionStatus newStatus) {
         Optional<Connection> opt = connectionRepo.findById(connectionId);

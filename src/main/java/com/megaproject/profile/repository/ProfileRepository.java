@@ -28,10 +28,6 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
 
     long countByProfileTypeAndDeletedFalseAndApprovedTrue(ProfileType profileType);
 
-    /**
-     * Full-text search on alumni profiles using MongoDB $text index.
-     * The text index covers: fullName, jobTitle, company, location, department, skills.
-     */
     @Query("{ $text: { $search: ?0 }, profileType: 'ALUMNI', deleted: false }")
     List<ProfileDocument> searchAlumniByText(String query);
 }

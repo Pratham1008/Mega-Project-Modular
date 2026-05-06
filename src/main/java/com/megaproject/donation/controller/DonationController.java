@@ -22,10 +22,6 @@ public class DonationController {
     private final DonationRepository donationRepo;
     private final ProfileRepository profileRepo;
 
-    /**
-     * Submit a donation (mock — always succeeds).
-     * Only ALUMNI can donate.
-     */
     @PostMapping
     @PreAuthorize("hasRole('ALUMNI')")
     public ResponseEntity<Donation> donate(
@@ -33,8 +29,6 @@ public class DonationController {
             @AuthenticationPrincipal Jwt jwt) {
 
         String userId = jwt.getSubject();
-
-        // Resolve donor name from profile (best effort)
         String donorName = profileRepo.findByUserId(userId)
                 .map(p -> p.getFullName())
                 .orElse("Anonymous");
@@ -50,11 +44,9 @@ public class DonationController {
                 .status("SUCCESS")
                 .build();
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(donationRepo.save(donation));
+        return ResponseEntity.status(HttpStatus.CREATED).body(donationRepo.save(donation));
     }
 
-    /** Public: list all donations (summary for leaderboard / total) */
     @GetMapping
     public ResponseEntity<Map<String, Object>> listAll() {
         List<Donation> all = donationRepo.findAllByOrderByPaidAtDesc();
@@ -66,11 +58,8 @@ public class DonationController {
         ));
     }
 
-    /** My donation history */
     @GetMapping("/my")
-    public ResponseEntity<List<Donation>> myDonations(
-            @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(
-                donationRepo.findByDonorUserIdOrderByPaidAtDesc(jwt.getSubject()));
+    public ResponseEntity<List<Donation>> myDonations(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(donationRepo.findByDonorUserIdOrderByPaidAtDesc(jwt.getSubject()));
     }
 }

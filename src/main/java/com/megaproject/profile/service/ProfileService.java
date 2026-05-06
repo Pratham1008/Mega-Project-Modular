@@ -24,10 +24,6 @@ public class ProfileService {
     private final ProfileMapper profileMapper;
     private final AuthService authService;
 
-    // =====================================================================
-    //  Educational Profile (STUDENT / ALUMNI)
-    // =====================================================================
-
     public EducationalProfileResponse createEducationalProfile(EducationalProfileRequest req) {
         if (profileRepository.existsByUserId(req.getUserId()))
             throw new ProfileAlreadyExistsException("Profile already exists for userId: " + req.getUserId());
@@ -36,10 +32,8 @@ public class ProfileService {
 
         ProfileDocument doc = profileMapper.toDocument(req);
         doc.setProfileType(determineType(req.getPassingYear()));
-
         ProfileDocument saved = profileRepository.save(doc);
 
-        // Update role in auth service
         if (saved.getProfileType() == ProfileType.ALUMNI) {
             authService.updateUserRole(saved.getUserId(), Role.ALUMNI);
         } else {
@@ -52,13 +46,10 @@ public class ProfileService {
     @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.subject")
     public EducationalProfileResponse updateEducationalProfile(String userId, EducationalProfileRequest req) {
         ProfileDocument doc = getDocumentByUserId(userId);
-
         profileMapper.updateDocumentFromRequest(req, doc);
         doc.setProfileType(determineType(req.getPassingYear()));
-
         ProfileDocument saved = profileRepository.save(doc);
 
-        // Update auth role based on new profile type
         if (saved.getProfileType() == ProfileType.ALUMNI) {
             authService.updateUserRole(userId, Role.ALUMNI);
         } else {
@@ -68,10 +59,6 @@ public class ProfileService {
         return profileMapper.toEducationalResponse(saved);
     }
 
-    // =====================================================================
-    //  Faculty Profile
-    // =====================================================================
-
     @PreAuthorize("hasRole('ADMIN')")
     public FacultyProfileResponse createFacultyProfile(FacultyProfileRequest req) {
         if (profileRepository.existsByUserId(req.getUserId()))
@@ -79,8 +66,7 @@ public class ProfileService {
 
         ProfileDocument doc = profileMapper.toDocument(req);
         doc.setProfileType(ProfileType.FACULTY);
-        doc.setApproved(true); // Faculty profiles are pre-approved by admin
-
+        doc.setApproved(true);
         ProfileDocument saved = profileRepository.save(doc);
         authService.updateUserRole(saved.getUserId(), Role.FACULTY);
 
@@ -93,10 +79,6 @@ public class ProfileService {
         profileMapper.updateDocumentFromRequest(req, doc);
         return profileMapper.toFacultyResponse(profileRepository.save(doc));
     }
-
-    // =====================================================================
-    //  Common CRUD
-    // =====================================================================
 
     public EducationalProfileResponse getEducationalProfile(String userId) {
         return profileMapper.toEducationalResponse(getDocumentByUserId(userId));
@@ -145,10 +127,6 @@ public class ProfileService {
         doc.setApproved(true);
         return profileMapper.toEducationalResponse(profileRepository.save(doc));
     }
-
-    // =====================================================================
-    //  Internal helpers
-    // =====================================================================
 
     private ProfileDocument getDocumentByUserId(String userId) {
         return profileRepository.findByUserId(userId)

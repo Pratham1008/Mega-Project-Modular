@@ -29,19 +29,6 @@ public class BulkImportService {
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
 
-    /**
-     * Import student/alumni data from an Excel (.xlsx) file.
-     *
-     * Excel structure (from Master Student Database):
-     *   Row 1: College header (skip)
-     *   Row 2: Column headers (PRN, Student Name, Gender, DOB, Email, ...)
-     *   Row 3+: Data
-     *
-     * For each row:
-     *   1. Auto-create auth User with default password KIT@{PRN}
-     *   2. Create ProfileDocument
-     *   3. Smart role detection: if passingYear <= currentYear → ALUMNI, else STUDENT
-     */
     public ImportResult importFromExcel(MultipartFile file) {
         ImportResult result = new ImportResult();
 
@@ -51,26 +38,24 @@ public class BulkImportService {
             Sheet sheet = workbook.getSheetAt(0);
             int currentYear = LocalDate.now().getYear();
 
-            // Data starts at row index 2 (0-based), row 0 = college header, row 1 = column headers
             for (int i = 2; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
                 try {
-                    String prn = getCellString(row, 1);       // Col B: PRN
-                    String fullName = getCellString(row, 2);   // Col C: Student Name
-                    String gender = getCellString(row, 3);     // Col D: Gender
-                    String dob = getCellDate(row, 4);          // Col E: Date of Birth
-                    String email = getCellString(row, 5);      // Col F: Email
-                    String phone = getCellString(row, 6);      // Col G: Mobile
-                    String address = getCellString(row, 7);    // Col H: Full Address
-                    String pinCode = getCellString(row, 8);    // Col I: Pin Code
-                    String city = getCellString(row, 9);       // Col J: City
-                    String district = getCellString(row, 10);  // Col K: District
-                    String state = getCellString(row, 11);     // Col L: State
-                    String branch = getCellString(row, 29);    // Col AD (index 29): Branch
+                    String prn = getCellString(row, 1);
+                    String fullName = getCellString(row, 2);
+                    String gender = getCellString(row, 3);
+                    String dob = getCellDate(row, 4);
+                    String email = getCellString(row, 5);
+                    String phone = getCellString(row, 6);
+                    String address = getCellString(row, 7);
+                    String pinCode = getCellString(row, 8);
+                    String city = getCellString(row, 9);
+                    String district = getCellString(row, 10);
+                    String state = getCellString(row, 11);
+                    String branch = getCellString(row, 29);
 
-                    // ── Validate essential fields ──
                     if (prn == null || prn.isBlank() || email == null || email.isBlank()
                             || fullName == null || fullName.isBlank()) {
                         result.addError(i + 1, "Missing PRN, email, or name");
@@ -79,25 +64,21 @@ public class BulkImportService {
 
                     email = email.trim().toLowerCase();
 
-                    // ── Skip if email already exists ──
                     if (userRepository.existsByEmail(email)) {
                         result.skipped++;
                         result.addError(i + 1, "Email already exists: " + email);
                         continue;
                     }
 
-                    // ── Skip if PRN already exists ──
                     if (profileRepository.existsByRegistrationNumber(prn.trim())) {
                         result.skipped++;
                         result.addError(i + 1, "PRN already exists: " + prn);
                         continue;
                     }
 
-                    // ── Derive admission & passing year from PRN ──
                     int admissionYear = deriveAdmissionYear(prn);
                     int passingYear = admissionYear + 4;
 
-                    // ── Smart role detection ──
                     ProfileType profileType;
                     Role userRole;
                     if (passingYear <= currentYear) {
@@ -108,20 +89,17 @@ public class BulkImportService {
                         userRole = Role.STUDENT;
                     }
 
-                    // ── Build location string ──
                     String location = buildLocation(city, state);
 
-                    // ── 1. Create auth User ──
                     String defaultPassword = "KIT@" + prn.trim();
                     User user = User.builder()
                             .email(email)
                             .password(passwordEncoder.encode(defaultPassword))
                             .role(userRole)
-                            .verified(true)  // admin-imported = trusted
+                            .verified(true)
                             .build();
                     User savedUser = userRepository.save(user);
 
-                    // ── 2. Create Profile ──
                     ProfileDocument profile = ProfileDocument.builder()
                             .userId(savedUser.getId())
                             .email(email)
@@ -162,17 +140,13 @@ public class BulkImportService {
         return result;
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
     private int deriveAdmissionYear(String prn) {
-        // PRN format: YYMM000XXX — first 2 digits = year prefix
-        // e.g. 2122000824 → 21 → 2021, 2223000366 → 22 → 2022
         try {
             String prefix = prn.trim().substring(0, 2);
             int yearShort = Integer.parseInt(prefix);
             return 2000 + yearShort;
         } catch (Exception e) {
-            return LocalDate.now().getYear() - 3; // fallback
+            return LocalDate.now().getYear() - 3;
         }
     }
 
@@ -183,7 +157,6 @@ public class BulkImportService {
             case STRING -> cell.getStringCellValue().trim();
             case NUMERIC -> {
                 double val = cell.getNumericCellValue();
-                // If it's a whole number, strip the decimal
                 if (val == Math.floor(val) && !Double.isInfinite(val)) {
                     yield String.valueOf((long) val);
                 }
@@ -219,7 +192,6 @@ public class BulkImportService {
 
     private String cleanName(String name) {
         if (name == null) return null;
-        // "Surname FirstName Middle" → keep as-is (natural format in India)
         return name.trim();
     }
 
@@ -234,8 +206,6 @@ public class BulkImportService {
         if (state != null && !state.isBlank()) parts.add(state.trim());
         return parts.isEmpty() ? "Kolhapur, Maharashtra" : String.join(", ", parts);
     }
-
-    // ── Result DTO ──────────────────────────────────────────────────────────
 
     @Data
     public static class ImportResult {

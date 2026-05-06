@@ -21,15 +21,10 @@ public class GraduationCronService {
     private final ProfileRepository profileRepository;
     private final AuthService authService;
 
-    /**
-     * Runs every year on August 1st at midnight UTC.
-     * Cron expression: "0 0 0 1 8 *"
-     * second, minute, hour, day of month, month, day of week
-     */
     @Scheduled(cron = "0 0 0 1 8 *")
     public void promoteStudentsToAlumni() {
         int currentYear = Year.now().getValue();
-        log.info("Starting scheduled job: Promoting students to alumni for passing year <= {}", currentYear);
+        log.info("Promoting students to alumni for passing year <= {}", currentYear);
 
         List<ProfileDocument> eligibleStudents = profileRepository
                 .findByProfileTypeAndDeletedFalseAndPassingYearLessThanEqual(ProfileType.STUDENT, currentYear);
@@ -46,12 +41,11 @@ public class GraduationCronService {
                 profileRepository.save(student);
                 authService.updateUserRole(student.getUserId(), Role.ALUMNI);
                 count++;
-                log.debug("Promoted user {} to ALUMNI", student.getUserId());
             } catch (Exception e) {
                 log.error("Failed to promote user {} to ALUMNI", student.getUserId(), e);
             }
         }
 
-        log.info("Successfully promoted {} students to ALUMNI status.", count);
+        log.info("Promoted {} students to ALUMNI status.", count);
     }
 }

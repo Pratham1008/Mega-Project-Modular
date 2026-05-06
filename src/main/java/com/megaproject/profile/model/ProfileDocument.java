@@ -6,33 +6,18 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.index.TextIndexed;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.TextScore;
 
 import java.time.Instant;
 import java.util.Set;
 
-/**
- * Single consolidated MongoDB document for all profile types.
- * Replaces the old split JPA entities: Profile + ProfileEducationalData + ProfileFaculty.
- * The userId field is the same String ID that exists in the users collection.
- *
- * Text index covers fullName, jobTitle, company, location, department, skills
- * for full-text search (replaces Elasticsearch alumni search).
- */
 @Document(collection = "profiles")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ProfileDocument {
 
     @Id
     private String id;
 
-    /** References users._id — not a DB-level foreign key, just a logical link */
     @Indexed(unique = true)
     private String userId;
 
@@ -44,7 +29,7 @@ public class ProfileDocument {
 
     private String phone;
     private String bloodGroup;
-    private String dateOfBirth;  // stored as "DD/MM/YYYY" string
+    private String dateOfBirth;
 
     @TextIndexed(weight = 2)
     private String department;
@@ -63,16 +48,16 @@ public class ProfileDocument {
     @Builder.Default
     private boolean deleted = false;
 
-    // ---- Educational / Alumni fields (used when profileType = STUDENT or ALUMNI) ----
     @Indexed(unique = true, sparse = true)
     private String registrationNumber;
     private Integer admissionYear;
+
+    @Indexed
     private Integer passingYear;
     private Integer currentSemester;
     private String resumeUrl;
     private Set<String> skills;
 
-    // ---- Employment info (mainly for ALUMNI) ----
     @TextIndexed(weight = 2)
     private String jobTitle;
 
@@ -82,7 +67,6 @@ public class ProfileDocument {
     @TextIndexed
     private String location;
 
-    // ---- Faculty-specific fields ----
     private String designation;
     private String officeLocation;
     private String researchInterests;
