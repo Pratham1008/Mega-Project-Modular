@@ -23,15 +23,20 @@ public class ChatController {
     private final SimpMessagingTemplate broker;
 
     @PostMapping("/dm/{otherUserId}")
-    public ResponseEntity<Conversation> startDm(
+    public ResponseEntity<?> startDm(
             @PathVariable String otherUserId,
             @AuthenticationPrincipal Jwt jwt) {
         String me = jwt.getSubject();
         String role = jwt.getClaimAsString("role");
-        if ("ADMIN".equals(role)) {
-            return ResponseEntity.ok(chatService.getOrCreateDmBypassConnection(me, otherUserId));
+        try {
+            if ("ADMIN".equals(role)) {
+                return ResponseEntity.ok(chatService.getOrCreateDmBypassConnection(me, otherUserId));
+            }
+            return ResponseEntity.ok(chatService.getOrCreateDm(me, otherUserId));
+        } catch (ChatService.NotConnectedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "not connected", "message", e.getMessage()));
         }
-        return ResponseEntity.ok(chatService.getOrCreateDm(me, otherUserId));
     }
 
     @GetMapping("/conversations")

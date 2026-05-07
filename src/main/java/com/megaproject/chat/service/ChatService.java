@@ -1,6 +1,5 @@
 package com.megaproject.chat.service;
 
-import com.megaproject.chat.dto.ConversationRequest;
 import com.megaproject.chat.model.*;
 import com.megaproject.chat.repository.*;
 import com.megaproject.profile.repository.ProfileRepository;
@@ -23,32 +22,13 @@ public class ChatService {
     public Conversation getOrCreateDm(String requesterId, String otherUserId) {
         boolean connected = connectionRepo.findAcceptedConnection(requesterId, otherUserId).isPresent();
         if (!connected) {
-            throw new IllegalStateException("Users are not connected. Send a connection request first.");
+            throw new NotConnectedException("Users are not connected. Send a connection request first.");
         }
-
-        Optional<Conversation> existing = conversationRepo
-                .findByGroupFalseAndParticipantIdsContainingAndParticipantIdsContaining(requesterId, otherUserId);
-        if (existing.isPresent()) return existing.get();
-
-        Conversation dm = Conversation.builder()
-                .group(false)
-                .participantIds(List.of(requesterId, otherUserId))
-                .lastMessageAt(Instant.now())
-                .build();
-        return conversationRepo.save(dm);
+        return findOrBuildDm(requesterId, otherUserId);
     }
 
     public Conversation getOrCreateDmBypassConnection(String requesterId, String otherUserId) {
-        Optional<Conversation> existing = conversationRepo
-                .findByGroupFalseAndParticipantIdsContainingAndParticipantIdsContaining(requesterId, otherUserId);
-        if (existing.isPresent()) return existing.get();
-
-        Conversation dm = Conversation.builder()
-                .group(false)
-                .participantIds(List.of(requesterId, otherUserId))
-                .lastMessageAt(Instant.now())
-                .build();
-        return conversationRepo.save(dm);
+        return findOrBuildDm(requesterId, otherUserId);
     }
 
     public List<Conversation> getMyConversations(String userId) {
@@ -93,5 +73,24 @@ public class ChatService {
             if (unread > 0) counts.put(c.getId(), unread);
         }
         return counts;
+    }
+
+    private Conversation findOrBuildDm(String requesterId, String otherUserId) {
+        Optional<Conversation> existing = conversationRepo
+                .findByGroupFalseAndParticipantIdsContainingAndParticipantIdsContaining(requesterId, otherUserId);
+        if (existing.isPresent()) return existing.get();
+
+        Conversation dm = Conversation.builder()
+                .group(false)
+                .participantIds(List.of(requesterId, otherUserId))
+                .lastMessageAt(Instant.now())
+                .build();
+        return conversationRepo.save(dm);
+    }
+
+    public static class NotConnectedException extends RuntimeException {
+        public NotConnectedException(String message) {
+            super(message);
+        }
     }
 }
