@@ -41,7 +41,7 @@ class GraduationCronServiceTest {
         p2.setUserId("user2");
         p2.setProfileType(ProfileType.STUDENT);
 
-        when(profileRepository.findByProfileTypeAndDeletedFalseAndPassingYearLessThanEqual(
+        when(profileRepository.findByProfileTypeAndDeletedFalseAndPassingYearLessThan(
                 eq(ProfileType.STUDENT), anyInt())).thenReturn(List.of(p1, p2));
 
         graduationCronService.promoteStudentsToAlumni();
@@ -56,7 +56,7 @@ class GraduationCronServiceTest {
 
     @Test
     void testPromoteStudents_noEligible() {
-        when(profileRepository.findByProfileTypeAndDeletedFalseAndPassingYearLessThanEqual(
+        when(profileRepository.findByProfileTypeAndDeletedFalseAndPassingYearLessThan(
                 eq(ProfileType.STUDENT), anyInt())).thenReturn(List.of());
 
         graduationCronService.promoteStudentsToAlumni();
