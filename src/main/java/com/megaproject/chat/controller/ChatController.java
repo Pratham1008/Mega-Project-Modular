@@ -30,7 +30,8 @@ public class ChatController {
         String role = jwt.getClaimAsString("role");
         try {
             if ("ADMIN".equals(role)) {
-                return ResponseEntity.ok(chatService.getOrCreateDmBypassConnection(me, otherUserId));
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Admin cannot use chat functionality"));
             }
             return ResponseEntity.ok(chatService.getOrCreateDm(me, otherUserId));
         } catch (ChatService.NotConnectedException e) {

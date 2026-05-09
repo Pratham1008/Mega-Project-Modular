@@ -24,10 +24,10 @@ public class GraduationCronService {
     @Scheduled(cron = "0 0 0 1 8 *")
     public void promoteStudentsToAlumni() {
         int currentYear = Year.now().getValue();
-        log.info("Promoting students to alumni for passing year <= {}", currentYear);
+        log.info("Promoting students to alumni for passing year < {}", currentYear);
 
         List<ProfileDocument> eligibleStudents = profileRepository
-                .findByProfileTypeAndDeletedFalseAndPassingYearLessThanEqual(ProfileType.STUDENT, currentYear);
+                .findByProfileTypeAndDeletedFalseAndPassingYearLessThan(ProfileType.STUDENT, currentYear);
 
         if (eligibleStudents.isEmpty()) {
             log.info("No eligible students found for promotion.");

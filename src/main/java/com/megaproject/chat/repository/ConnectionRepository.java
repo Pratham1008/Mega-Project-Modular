@@ -23,7 +23,7 @@ public interface ConnectionRepository extends MongoRepository<Connection, String
 
     /** Pending requests I sent */
     List<Connection> findByRequesterIdAndStatus(String requesterId, ConnectionStatus status);
-
+    long countByReceiverIdAndStatus(String receiverId, ConnectionStatus status);
     /** All my accepted connections */
     @Query("{ $or: [ { 'requesterId': ?0 }, { 'receiverId': ?0 } ], 'status': 'ACCEPTED' }")
     List<Connection> findAllAcceptedForUser(String userId);

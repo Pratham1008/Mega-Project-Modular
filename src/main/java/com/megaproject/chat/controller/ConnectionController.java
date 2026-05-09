@@ -4,6 +4,9 @@ import com.megaproject.chat.model.Connection;
 import com.megaproject.chat.model.Connection.ConnectionStatus;
 import com.megaproject.chat.repository.ConnectionRepository;
 import com.megaproject.profile.repository.ProfileRepository;
+import com.megaproject.auth.repository.UserRepository;
+import com.megaproject.auth.model.User;
+import com.megaproject.auth.model.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +23,7 @@ public class ConnectionController {
 
     private final ConnectionRepository connectionRepo;
     private final ProfileRepository profileRepo;
+    private final UserRepository userRepo;
 
     @PostMapping("/{receiverId}")
     public ResponseEntity<?> sendRequest(
@@ -27,8 +31,21 @@ public class ConnectionController {
             @AuthenticationPrincipal Jwt jwt) {
 
         String requesterId = jwt.getSubject();
+        String requesterRole = jwt.getClaimAsString("role");
+
+        if ("ADMIN".equals(requesterRole)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Admin cannot use connections"));
+        }
+
         if (requesterId.equals(receiverId)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Cannot connect with yourself"));
+        }
+
+        Optional<User> receiver = userRepo.findById(receiverId);
+        if (receiver.isPresent() && receiver.get().getRole() == Role.ADMIN) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Cannot connect with an Admin"));
         }
 
         Optional<Connection> existing = connectionRepo.findByUsers(requesterId, receiverId);
@@ -96,7 +113,7 @@ public class ConnectionController {
 
     @GetMapping("/pending/count")
     public ResponseEntity<Map<String, Long>> pendingCount(@AuthenticationPrincipal Jwt jwt) {
-        long count = connectionRepo.findByReceiverIdAndStatus(jwt.getSubject(), ConnectionStatus.PENDING).size();
+        long count = connectionRepo.countByReceiverIdAndStatus(jwt.getSubject(), ConnectionStatus.PENDING);
         return ResponseEntity.ok(Map.of("count", count));
     }
 

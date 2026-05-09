@@ -20,6 +20,7 @@ public interface ProfileMapper {
     ProfileDocument toDocument(EducationalProfileRequest req);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "userId", ignore = true)
     @Mapping(target = "profileType", constant = "FACULTY")
     @Mapping(target = "approved", constant = "false")
     @Mapping(target = "deleted", constant = "false")

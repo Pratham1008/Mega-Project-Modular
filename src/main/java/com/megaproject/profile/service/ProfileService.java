@@ -8,6 +8,9 @@ import com.megaproject.profile.exception.*;
 import com.megaproject.profile.mapper.ProfileMapper;
 import com.megaproject.profile.model.*;
 import com.megaproject.profile.repository.ProfileRepository;
+import com.megaproject.auth.repository.UserRepository;
+import com.megaproject.auth.model.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,8 @@ public class ProfileService {
     private final ProfileRepository profileRepository;
     private final ProfileMapper profileMapper;
     private final AuthService authService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public EducationalProfileResponse createEducationalProfile(EducationalProfileRequest req) {
         if (profileRepository.existsByUserId(req.getUserId()))
@@ -61,14 +66,32 @@ public class ProfileService {
 
     @PreAuthorize("hasRole('ADMIN')")
     public FacultyProfileResponse createFacultyProfile(FacultyProfileRequest req) {
-        if (profileRepository.existsByUserId(req.getUserId()))
-            throw new ProfileAlreadyExistsException("Profile already exists for userId: " + req.getUserId());
+        if (profileRepository.existsByEmail(req.getEmail()))
+            throw new ProfileAlreadyExistsException("Profile already exists for email: " + req.getEmail());
+
+        String email = req.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            String prefix = email.split("@")[0];
+            String defaultPassword = "KIT@" + prefix;
+            User newUser = User.builder()
+                    .email(email)
+                    .password(passwordEncoder.encode(defaultPassword))
+                    .role(Role.FACULTY)
+                    .verified(true)
+                    .build();
+            return userRepository.save(newUser);
+        });
 
         ProfileDocument doc = profileMapper.toDocument(req);
+        doc.setUserId(user.getId());
+        doc.setEmail(email);
         doc.setProfileType(ProfileType.FACULTY);
         doc.setApproved(true);
         ProfileDocument saved = profileRepository.save(doc);
-        authService.updateUserRole(saved.getUserId(), Role.FACULTY);
+        
+        if (user.getRole() != Role.FACULTY) {
+            authService.updateUserRole(saved.getUserId(), Role.FACULTY);
+        }
 
         return profileMapper.toFacultyResponse(saved);
     }
@@ -135,6 +158,12 @@ public class ProfileService {
     }
 
     private ProfileType determineType(int passingYear) {
-        return passingYear >= Year.now().getValue() ? ProfileType.STUDENT : ProfileType.ALUMNI;
+        int currentYear = java.time.Year.now().getValue();
+        int currentMonth = java.time.LocalDate.now().getMonthValue();
+        // If passing year is in the past, or if passing year is current year and we are past August, they are ALUMNI.
+        if (passingYear < currentYear || (passingYear == currentYear && currentMonth >= 8)) {
+            return ProfileType.ALUMNI;
+        }
+        return ProfileType.STUDENT;
     }
 }

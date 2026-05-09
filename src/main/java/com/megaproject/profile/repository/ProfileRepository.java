@@ -22,7 +22,10 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
 
     List<ProfileDocument> findByProfileTypeAndDeletedFalse(ProfileType profileType);
 
-    List<ProfileDocument> findByProfileTypeAndDeletedFalseAndPassingYearLessThanEqual(ProfileType profileType, int passingYear);
+    List<ProfileDocument> findByProfileTypeAndDeletedFalseAndPassingYearLessThan(ProfileType profileType, int passingYear);
+
+    @Query("{ 'profileType': ?0, 'deleted': false, 'location': { $exists: true, $ne: '', $ne: null } }")
+    List<ProfileDocument> findProfilesWithLocation(ProfileType type);
 
     List<ProfileDocument> findByDeletedFalse();
 

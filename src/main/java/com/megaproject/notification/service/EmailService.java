@@ -17,7 +17,9 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
-    private static final String SENDER_EMAIL = "noreply@prathameshcorporations.site";
+    
+    @org.springframework.beans.factory.annotation.Value("${app.mail.sender-email:noreply@prathameshcorporations.site}")
+    private String senderEmail;
 
     @Async
     public void sendVerificationOtp(String toEmail, String otp) {
@@ -41,7 +43,7 @@ public class EmailService {
         try {
             MimeMessage msg = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-            helper.setFrom(SENDER_EMAIL);
+            helper.setFrom(senderEmail);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(templateEngine.process(template, ctx), true);

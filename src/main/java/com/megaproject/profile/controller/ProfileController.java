@@ -94,9 +94,8 @@ public class ProfileController {
 
     @GetMapping("/map")
     public ResponseEntity<List<Map<String, Object>>> mapProfiles() {
-        List<Map<String, Object>> pins = profileRepository.findByProfileTypeAndDeletedFalse(ProfileType.ALUMNI)
+        List<Map<String, Object>> pins = profileRepository.findProfilesWithLocation(ProfileType.ALUMNI)
                 .stream()
-                .filter(p -> p.getLocation() != null && !p.getLocation().isBlank())
                 .map(p -> Map.<String, Object>of(
                         "userId", p.getUserId(),
                         "fullName", p.getFullName() != null ? p.getFullName() : "",

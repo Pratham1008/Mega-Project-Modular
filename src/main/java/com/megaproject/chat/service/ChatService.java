@@ -5,6 +5,12 @@ import com.megaproject.chat.repository.*;
 import com.megaproject.profile.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -18,6 +24,7 @@ public class ChatService {
     private final ChatMessageRepository messageRepo;
     private final ConnectionRepository connectionRepo;
     private final ProfileRepository profileRepo;
+    private final MongoTemplate mongoTemplate;
 
     public Conversation getOrCreateDm(String requesterId, String otherUserId) {
         boolean connected = connectionRepo.findAcceptedConnection(requesterId, otherUserId).isPresent();
@@ -60,17 +67,30 @@ public class ChatService {
     }
 
     public void markRead(String conversationId, String userId) {
-        List<ChatMessage> unread = messageRepo.findByConversationIdAndReadFalseAndSenderIdNot(conversationId, userId);
-        unread.forEach(m -> m.setRead(true));
-        messageRepo.saveAll(unread);
+        Query query = new Query(Criteria.where("conversationId").is(conversationId)
+                .and("read").is(false)
+                .and("senderId").ne(userId));
+        Update update = new Update().set("read", true);
+        mongoTemplate.updateMulti(query, update, ChatMessage.class);
     }
 
     public Map<String, Long> getUnreadCounts(String userId) {
         List<Conversation> convs = conversationRepo.findByParticipantIdsContainingOrderByLastMessageAtDesc(userId);
+        if (convs.isEmpty()) return Collections.emptyMap();
+        
+        List<String> convIds = convs.stream().map(Conversation::getId).toList();
+        
+        Aggregation agg = Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("conversationId").in(convIds)
+                        .and("read").is(false)
+                        .and("senderId").ne(userId)),
+                Aggregation.group("conversationId").count().as("unreadCount")
+        );
+        
+        AggregationResults<Map> results = mongoTemplate.aggregate(agg, "chat_messages", Map.class);
         Map<String, Long> counts = new HashMap<>();
-        for (Conversation c : convs) {
-            long unread = messageRepo.countByConversationIdAndReadFalseAndSenderIdNot(c.getId(), userId);
-            if (unread > 0) counts.put(c.getId(), unread);
+        for (Map result : results.getMappedResults()) {
+            counts.put((String) result.get("_id"), ((Number) result.get("unreadCount")).longValue());
         }
         return counts;
     }

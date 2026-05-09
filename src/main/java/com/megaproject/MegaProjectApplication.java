@@ -6,7 +6,10 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
+
 @SpringBootApplication
+@EnableMongoAuditing
 @EnableMongoRepositories(basePackages = {
         "com.megaproject.auth.repository",
         "com.megaproject.profile.repository",

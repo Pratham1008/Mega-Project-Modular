@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Random;
+import java.security.SecureRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ public class OtpService {
         // Delete any existing OTP for this user + purpose
         otpRepository.deleteAllByUserIdAndPurpose(userId, purpose);
 
-        String code = String.format("%06d", new Random().nextInt(999999));
+        String code = String.format("%06d", new SecureRandom().nextInt(999999));
 
         Otp otp = Otp.builder()
                 .userId(userId)
