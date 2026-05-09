@@ -29,7 +29,6 @@ public class BulkImportService {
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // ── Column indices (0-based) for "Master Student Database" format ──────────
     private static final int COL_SR_NO     = 0;
     private static final int COL_PRN       = 1;
     private static final int COL_NAME      = 2;
@@ -43,7 +42,7 @@ public class BulkImportService {
     private static final int COL_DISTRICT  = 10;
     private static final int COL_STATE     = 11;
     private static final int COL_BRANCH    = 29;
-    private static final int COL_YEAR_DOWN = 38; // "No. of years of year down in Engineering"
+    private static final int COL_YEAR_DOWN = 38;
 
     public ImportResult importFromExcel(MultipartFile file) {
         ImportResult result = new ImportResult();
@@ -54,12 +53,10 @@ public class BulkImportService {
             Sheet sheet = workbook.getSheetAt(0);
             int currentYear = LocalDate.now().getYear();
 
-            // Row 0 = master title, Row 1 = column headers, data starts at Row 2 (0-indexed)
             for (int i = 2; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                // Skip completely empty rows
                 boolean isEmpty = true;
                 for (int c = 0; c < 10; c++) {
                     if (row.getCell(c) != null && row.getCell(c).getCellType() != CellType.BLANK) {
@@ -83,7 +80,6 @@ public class BulkImportService {
                     String state    = getCellString(row, COL_STATE);
                     String branch   = getCellString(row, COL_BRANCH);
 
-                    // ── Validate required fields ──────────────────────────────
                     if (prn == null || prn.isBlank() || email == null || email.isBlank()
                             || fullName == null || fullName.isBlank()) {
                         result.skipped++;
@@ -93,7 +89,6 @@ public class BulkImportService {
 
                     email = email.trim().toLowerCase();
 
-                    // ── Duplicate checks ──────────────────────────────────────
                     if (userRepository.existsByEmail(email)) {
                         result.skipped++;
                         result.addError(i + 1, "Skipped — email already exists: " + email);
@@ -106,15 +101,10 @@ public class BulkImportService {
                         continue;
                     }
 
-                    // ── Passing year calculation ──────────────────────────────
-                    // 1. Derive admission year from first 2 digits of PRN (e.g. "21" → 2021)
-                    // 2. Add standard 4-year degree duration
-                    // 3. Add any year-down years (e.g. "2122..." student with 1 YD → 2021+4+1=2026)
                     int admissionYear = deriveAdmissionYear(prn);
                     int yearsYearDown = getCellInt(row, COL_YEAR_DOWN);
                     int passingYear   = admissionYear + 4 + yearsYearDown;
 
-                    // ── Role classification ───────────────────────────────────
                     ProfileType profileType;
                     Role userRole;
                     if (passingYear < currentYear) {
@@ -125,7 +115,7 @@ public class BulkImportService {
                         userRole    = Role.STUDENT;
                     }
 
-                    String location       = buildLocation(city, state);
+                    String location        = buildLocation(city, state);
                     String defaultPassword = "KIT@" + prn.trim();
 
                     User user = User.builder()
@@ -177,7 +167,6 @@ public class BulkImportService {
         return result;
     }
 
-    // ── Year derived from first 2 chars of PRN e.g. "2122..." → prefix "21" → 2021
     private int deriveAdmissionYear(String prn) {
         try {
             String prefix = prn.trim().substring(0, 2);
@@ -212,7 +201,6 @@ public class BulkImportService {
         };
     }
 
-    // Returns an integer from a numeric cell, defaulting to 0 for blank/null/non-numeric
     private int getCellInt(Row row, int col) {
         Cell cell = row.getCell(col);
         if (cell == null) return 0;

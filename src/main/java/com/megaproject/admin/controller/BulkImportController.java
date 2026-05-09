@@ -22,8 +22,6 @@ public class BulkImportController {
     private final BulkExportService exportService;
     private final BulkRoleService   roleService;
 
-    // ── Import ────────────────────────────────────────────────────────────────
-
     @PostMapping("/import")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> importExcel(@RequestParam("file") MultipartFile file) {
@@ -36,8 +34,6 @@ public class BulkImportController {
         }
         return ResponseEntity.ok(importService.importFromExcel(file));
     }
-
-    // ── Export ────────────────────────────────────────────────────────────────
 
     @GetMapping("/export")
     @PreAuthorize("hasRole('ADMIN')")
@@ -56,12 +52,6 @@ public class BulkImportController {
         }
     }
 
-    // ── Bulk Role Change ──────────────────────────────────────────────────────
-
-    /**
-     * POST /admin/bulk-role
-     * Body: { "userIds": ["uid1","uid2",...], "role": "ALUMNI" | "STUDENT" }
-     */
     @PostMapping("/bulk-role")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BulkRoleResult> bulkChangeRole(@RequestBody Map<String, Object> body) {

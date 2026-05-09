@@ -33,7 +33,7 @@ public class BulkRoleService {
             throw new IllegalArgumentException("Invalid role: " + targetRole + ". Must be STUDENT or ALUMNI.");
         }
 
-        if (profileType == ProfileType.FACULTY || profileType == ProfileType.ADMIN) {
+        if (profileType != ProfileType.STUDENT && profileType != ProfileType.ALUMNI) {
             throw new IllegalArgumentException("Bulk role change only supports STUDENT and ALUMNI.");
         }
 
@@ -45,11 +45,11 @@ public class BulkRoleService {
                 profileRepository.save(profile);
                 authService.updateUserRole(userId, authRole);
                 result.updated++;
-                log.info("Role changed for userId={} to {}", userId, targetRole);
+                log.info("Role changed userId={} to {}", userId, targetRole);
             } catch (Exception e) {
                 result.failed++;
                 result.errors.add(userId + ": " + e.getMessage());
-                log.warn("Failed role change for userId={}: {}", userId, e.getMessage());
+                log.warn("Role change failed userId={}: {}", userId, e.getMessage());
             }
         }
 
