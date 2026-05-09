@@ -1,14 +1,16 @@
 package com.megaproject.admin.controller;
 
-import com.megaproject.admin.service.BulkImportService;
-import com.megaproject.admin.service.BulkImportService.ImportResult;
 import com.megaproject.admin.service.BulkExportService;
+import com.megaproject.admin.service.BulkImportService;
+import com.megaproject.admin.service.BulkRoleService;
+import com.megaproject.admin.service.BulkRoleService.BulkRoleResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -18,6 +20,9 @@ public class BulkImportController {
 
     private final BulkImportService importService;
     private final BulkExportService exportService;
+    private final BulkRoleService   roleService;
+
+    // ── Import ────────────────────────────────────────────────────────────────
 
     @PostMapping("/import")
     @PreAuthorize("hasRole('ADMIN')")
@@ -32,20 +37,41 @@ public class BulkImportController {
         return ResponseEntity.ok(importService.importFromExcel(file));
     }
 
+    // ── Export ────────────────────────────────────────────────────────────────
+
     @GetMapping("/export")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportExcel() {
         try {
             byte[] data = exportService.exportToExcel();
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentType(MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
             headers.setContentDisposition(ContentDisposition.attachment()
-                    .filename("alumni_connect_export.xlsx")
-                    .build());
+                    .filename("alumni_connect_export.xlsx").build());
             headers.setContentLength(data.length);
             return new ResponseEntity<>(data, headers, HttpStatus.OK);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    // ── Bulk Role Change ──────────────────────────────────────────────────────
+
+    /**
+     * POST /admin/bulk-role
+     * Body: { "userIds": ["uid1","uid2",...], "role": "ALUMNI" | "STUDENT" }
+     */
+    @PostMapping("/bulk-role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BulkRoleResult> bulkChangeRole(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> userIds = (List<String>) body.get("userIds");
+        String role          = (String) body.get("role");
+
+        if (userIds == null || userIds.isEmpty() || role == null || role.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(roleService.changeRoles(userIds, role));
     }
 }
