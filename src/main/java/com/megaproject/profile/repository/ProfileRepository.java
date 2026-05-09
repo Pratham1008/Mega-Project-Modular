@@ -20,11 +20,13 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
 
     boolean existsByRegistrationNumber(String registrationNumber);
 
+    boolean existsByEmail(String email);
+
     List<ProfileDocument> findByProfileTypeAndDeletedFalse(ProfileType profileType);
 
     List<ProfileDocument> findByProfileTypeAndDeletedFalseAndPassingYearLessThan(ProfileType profileType, int passingYear);
 
-    @Query("{ 'profileType': ?0, 'deleted': false, 'location': { $exists: true, $ne: '', $ne: null } }")
+    @Query("{ 'profileType': ?0, 'deleted': false, 'location': { $exists: true, $nin: ['', null] } }")
     List<ProfileDocument> findProfilesWithLocation(ProfileType type);
 
     List<ProfileDocument> findByDeletedFalse();
