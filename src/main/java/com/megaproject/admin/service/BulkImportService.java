@@ -29,6 +29,22 @@ public class BulkImportService {
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
 
+    // ── Column indices (0-based) for "Master Student Database" format ──────────
+    private static final int COL_SR_NO     = 0;
+    private static final int COL_PRN       = 1;
+    private static final int COL_NAME      = 2;
+    private static final int COL_GENDER    = 3;
+    private static final int COL_DOB       = 4;
+    private static final int COL_EMAIL     = 5;
+    private static final int COL_PHONE     = 6;
+    private static final int COL_ADDRESS   = 7;
+    private static final int COL_PINCODE   = 8;
+    private static final int COL_CITY      = 9;
+    private static final int COL_DISTRICT  = 10;
+    private static final int COL_STATE     = 11;
+    private static final int COL_BRANCH    = 29;
+    private static final int COL_YEAR_DOWN = 38; // "No. of years of year down in Engineering"
+
     public ImportResult importFromExcel(MultipartFile file) {
         ImportResult result = new ImportResult();
 
@@ -38,60 +54,80 @@ public class BulkImportService {
             Sheet sheet = workbook.getSheetAt(0);
             int currentYear = LocalDate.now().getYear();
 
+            // Row 0 = master title, Row 1 = column headers, data starts at Row 2 (0-indexed)
             for (int i = 2; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                try {
-                    String prn = getCellString(row, 1);
-                    String fullName = getCellString(row, 2);
-                    String gender = getCellString(row, 3);
-                    String dob = getCellDate(row, 4);
-                    String email = getCellString(row, 5);
-                    String phone = getCellString(row, 6);
-                    String address = getCellString(row, 7);
-                    String pinCode = getCellString(row, 8);
-                    String city = getCellString(row, 9);
-                    String district = getCellString(row, 10);
-                    String state = getCellString(row, 11);
-                    String branch = getCellString(row, 29);
+                // Skip completely empty rows
+                boolean isEmpty = true;
+                for (int c = 0; c < 10; c++) {
+                    if (row.getCell(c) != null && row.getCell(c).getCellType() != CellType.BLANK) {
+                        isEmpty = false;
+                        break;
+                    }
+                }
+                if (isEmpty) continue;
 
+                try {
+                    String prn      = getCellString(row, COL_PRN);
+                    String fullName = getCellString(row, COL_NAME);
+                    String gender   = getCellString(row, COL_GENDER);
+                    String dob      = getCellDate(row, COL_DOB);
+                    String email    = getCellString(row, COL_EMAIL);
+                    String phone    = getCellString(row, COL_PHONE);
+                    String address  = getCellString(row, COL_ADDRESS);
+                    String pinCode  = getCellString(row, COL_PINCODE);
+                    String city     = getCellString(row, COL_CITY);
+                    String district = getCellString(row, COL_DISTRICT);
+                    String state    = getCellString(row, COL_STATE);
+                    String branch   = getCellString(row, COL_BRANCH);
+
+                    // ── Validate required fields ──────────────────────────────
                     if (prn == null || prn.isBlank() || email == null || email.isBlank()
                             || fullName == null || fullName.isBlank()) {
-                        result.addError(i + 1, "Missing PRN, email, or name");
+                        result.skipped++;
+                        result.addError(i + 1, "Skipped — missing PRN, email, or name");
                         continue;
                     }
 
                     email = email.trim().toLowerCase();
 
+                    // ── Duplicate checks ──────────────────────────────────────
                     if (userRepository.existsByEmail(email)) {
                         result.skipped++;
-                        result.addError(i + 1, "Email already exists: " + email);
+                        result.addError(i + 1, "Skipped — email already exists: " + email);
                         continue;
                     }
 
                     if (profileRepository.existsByRegistrationNumber(prn.trim())) {
                         result.skipped++;
-                        result.addError(i + 1, "PRN already exists: " + prn);
+                        result.addError(i + 1, "Skipped — PRN already exists: " + prn);
                         continue;
                     }
 
+                    // ── Passing year calculation ──────────────────────────────
+                    // 1. Derive admission year from first 2 digits of PRN (e.g. "21" → 2021)
+                    // 2. Add standard 4-year degree duration
+                    // 3. Add any year-down years (e.g. "2122..." student with 1 YD → 2021+4+1=2026)
                     int admissionYear = deriveAdmissionYear(prn);
-                    int passingYear = admissionYear + 4;
+                    int yearsYearDown = getCellInt(row, COL_YEAR_DOWN);
+                    int passingYear   = admissionYear + 4 + yearsYearDown;
 
+                    // ── Role classification ───────────────────────────────────
                     ProfileType profileType;
                     Role userRole;
                     if (passingYear < currentYear) {
                         profileType = ProfileType.ALUMNI;
-                        userRole = Role.ALUMNI;
+                        userRole    = Role.ALUMNI;
                     } else {
                         profileType = ProfileType.STUDENT;
-                        userRole = Role.STUDENT;
+                        userRole    = Role.STUDENT;
                     }
 
-                    String location = buildLocation(city, state);
-
+                    String location       = buildLocation(city, state);
                     String defaultPassword = "KIT@" + prn.trim();
+
                     User user = User.builder()
                             .email(email)
                             .password(passwordEncoder.encode(defaultPassword))
@@ -106,7 +142,7 @@ public class BulkImportService {
                             .fullName(cleanName(fullName))
                             .phone(cleanPhone(phone))
                             .dateOfBirth(dob)
-                            .department(branch != null ? branch.trim() : "CSE")
+                            .department(branch != null && !branch.isBlank() ? branch.trim() : "CSE")
                             .registrationNumber(prn.trim())
                             .admissionYear(admissionYear)
                             .passingYear(passingYear)
@@ -125,7 +161,8 @@ public class BulkImportService {
                     profileRepository.save(profile);
 
                     result.imported++;
-                    log.info("Imported: {} ({}) as {}", fullName, email, profileType);
+                    log.info("Imported: {} ({}) as {} [passing year: {}]",
+                            fullName, email, profileType, passingYear);
 
                 } catch (Exception e) {
                     result.addError(i + 1, "Error: " + e.getMessage());
@@ -140,13 +177,14 @@ public class BulkImportService {
         return result;
     }
 
+    // ── Year derived from first 2 chars of PRN e.g. "2122..." → prefix "21" → 2021
     private int deriveAdmissionYear(String prn) {
         try {
             String prefix = prn.trim().substring(0, 2);
             int yearShort = Integer.parseInt(prefix);
             return 2000 + yearShort;
         } catch (Exception e) {
-            return LocalDate.now().getYear() - 3;
+            return LocalDate.now().getYear() - 4;
         }
     }
 
@@ -154,7 +192,7 @@ public class BulkImportService {
         Cell cell = row.getCell(col);
         if (cell == null) return null;
         return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue().trim();
+            case STRING  -> cell.getStringCellValue().trim();
             case NUMERIC -> {
                 double val = cell.getNumericCellValue();
                 if (val == Math.floor(val) && !Double.isInfinite(val)) {
@@ -166,7 +204,7 @@ public class BulkImportService {
             case FORMULA -> {
                 try { yield cell.getStringCellValue(); }
                 catch (Exception e) {
-                    try { yield String.valueOf(cell.getNumericCellValue()); }
+                    try { yield String.valueOf((long) cell.getNumericCellValue()); }
                     catch (Exception e2) { yield null; }
                 }
             }
@@ -174,12 +212,28 @@ public class BulkImportService {
         };
     }
 
+    // Returns an integer from a numeric cell, defaulting to 0 for blank/null/non-numeric
+    private int getCellInt(Row row, int col) {
+        Cell cell = row.getCell(col);
+        if (cell == null) return 0;
+        try {
+            if (cell.getCellType() == CellType.NUMERIC) {
+                return (int) cell.getNumericCellValue();
+            }
+            String s = getCellString(row, col);
+            if (s == null || s.isBlank() || s.equals("-")) return 0;
+            return Integer.parseInt(s.trim());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     private String getCellDate(Row row, int col) {
         Cell cell = row.getCell(col);
         if (cell == null) return null;
         try {
             if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
-                Date date = cell.getDateCellValue();
+                java.util.Date date = cell.getDateCellValue();
                 LocalDate ld = Instant.ofEpochMilli(date.getTime())
                         .atZone(ZoneId.systemDefault()).toLocalDate();
                 return ld.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
@@ -202,7 +256,7 @@ public class BulkImportService {
 
     private String buildLocation(String city, String state) {
         List<String> parts = new ArrayList<>();
-        if (city != null && !city.isBlank()) parts.add(city.trim());
+        if (city  != null && !city.isBlank())  parts.add(city.trim());
         if (state != null && !state.isBlank()) parts.add(state.trim());
         return parts.isEmpty() ? "Kolhapur, Maharashtra" : String.join(", ", parts);
     }
@@ -210,7 +264,7 @@ public class BulkImportService {
     @Data
     public static class ImportResult {
         private int imported = 0;
-        private int skipped = 0;
+        private int skipped  = 0;
         private List<ErrorEntry> errors = new ArrayList<>();
 
         public void addError(int row, String message) {

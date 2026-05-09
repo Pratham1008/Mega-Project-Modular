@@ -1,6 +1,7 @@
 package com.megaproject.profile.service;
 
 import com.megaproject.auth.model.Role;
+import com.megaproject.auth.repository.UserRepository;
 import com.megaproject.auth.service.AuthService;
 import com.megaproject.profile.dto.request.EducationalProfileRequest;
 import com.megaproject.profile.dto.response.EducationalProfileResponse;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Year;
 import java.util.Map;
@@ -27,6 +29,12 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProfileServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @Mock
     private ProfileRepository profileRepository;
