@@ -54,6 +54,5 @@ public class EducationalProfileRequest {
     private String jobTitle;
     private String company;
 
-    @NotBlank(message = "Location is required (e.g. 'Kolhapur, Maharashtra')")
     private String location;
 }

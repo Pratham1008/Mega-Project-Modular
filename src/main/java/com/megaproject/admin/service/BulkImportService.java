@@ -81,7 +81,7 @@ public class BulkImportService {
 
                     ProfileType profileType;
                     Role userRole;
-                    if (passingYear <= currentYear) {
+                    if (passingYear < currentYear) {
                         profileType = ProfileType.ALUMNI;
                         userRole = Role.ALUMNI;
                     } else {

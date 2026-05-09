@@ -2,8 +2,9 @@ package com.megaproject.admin.controller;
 
 import com.megaproject.admin.service.BulkImportService;
 import com.megaproject.admin.service.BulkImportService.ImportResult;
+import com.megaproject.admin.service.BulkExportService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,6 +17,7 @@ import java.util.Map;
 public class BulkImportController {
 
     private final BulkImportService importService;
+    private final BulkExportService exportService;
 
     @PostMapping("/import")
     @PreAuthorize("hasRole('ADMIN')")
@@ -28,5 +30,22 @@ public class BulkImportController {
             return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
         }
         return ResponseEntity.ok(importService.importFromExcel(file));
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> exportExcel() {
+        try {
+            byte[] data = exportService.exportToExcel();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename("alumni_connect_export.xlsx")
+                    .build());
+            headers.setContentLength(data.length);
+            return new ResponseEntity<>(data, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
