@@ -97,7 +97,7 @@ public class ChatService {
 
     private Conversation findOrBuildDm(String requesterId, String otherUserId) {
         Optional<Conversation> existing = conversationRepo
-                .findByGroupFalseAndParticipantIdsContainingAndParticipantIdsContaining(requesterId, otherUserId);
+                .findDmByBothParticipants(requesterId, otherUserId);
         if (existing.isPresent()) return existing.get();
 
         Conversation dm = Conversation.builder()

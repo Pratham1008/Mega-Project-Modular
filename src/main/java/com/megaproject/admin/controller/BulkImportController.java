@@ -23,7 +23,7 @@ public class BulkImportController {
     private final BulkRoleService   roleService;
 
     @PostMapping("/import")
-    @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> importExcel(@RequestParam("file") MultipartFile file) {
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.toLowerCase().endsWith(".xlsx")) {
@@ -36,7 +36,7 @@ public class BulkImportController {
     }
 
     @GetMapping("/export")
-    @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportExcel() {
         try {
             byte[] data = exportService.exportToExcel();
@@ -53,7 +53,7 @@ public class BulkImportController {
     }
 
     @PostMapping("/bulk-role")
-    @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BulkRoleResult> bulkChangeRole(@RequestBody Map<String, Object> body) {
         @SuppressWarnings("unchecked")
         List<String> userIds = (List<String>) body.get("userIds");
