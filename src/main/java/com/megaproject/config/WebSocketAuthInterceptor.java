@@ -1,6 +1,5 @@
 package com.megaproject.config;
 
-import com.megaproject.profile.model.ProfileDocument;
 import com.megaproject.profile.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,17 +49,20 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
                 Jwt jwt = jwtDecoder.decode(token);
                 String userId = jwt.getSubject();
                 attributes.put("userId", userId);
-                attributes.put("role", jwt.getClaimAsString("role"));
+                attributes.put("role", jwt.getClaimAsString("role") != null
+                        ? jwt.getClaimAsString("role") : "USER");
 
                 profileRepository.findByUserId(userId).ifPresentOrElse(
                     profile -> {
-                        attributes.put("name", profile.getFullName() != null ? profile.getFullName() : "User");
-                        attributes.put("photo", profile.getPhotoUrl());
+                        attributes.put("name", profile.getFullName() != null
+                                ? profile.getFullName() : "User");
+                        if (profile.getPhotoUrl() != null) {
+                            attributes.put("photo", profile.getPhotoUrl());
+                        }
                     },
                     () -> {
-                        attributes.put("name", jwt.getClaimAsString("email") != null
-                                ? jwt.getClaimAsString("email").split("@")[0] : "User");
-                        attributes.put("photo", null);
+                        String email = jwt.getClaimAsString("email");
+                        attributes.put("name", email != null ? email.split("@")[0] : "User");
                     }
                 );
 
