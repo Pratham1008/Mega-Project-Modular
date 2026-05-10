@@ -42,6 +42,10 @@ public class ChatService {
         return conversationRepo.findByParticipantIdsContainingOrderByLastMessageAtDesc(userId);
     }
 
+    public Optional<Conversation> getConversationById(String conversationId) {
+        return conversationRepo.findById(conversationId);
+    }
+
     public List<ChatMessage> getMessages(String conversationId, int page, int size) {
         return messageRepo.findByConversationIdOrderBySentAtAsc(conversationId, PageRequest.of(page, size));
     }

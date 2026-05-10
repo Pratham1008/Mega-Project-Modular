@@ -63,13 +63,30 @@ public class ChatController {
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload ChatMessageRequest req,
                             @Header("simpSessionAttributes") Map<String, Object> attrs) {
-        String senderId = (String) attrs.getOrDefault("userId", "unknown");
-        String senderName = (String) attrs.getOrDefault("name", "User");
+        String senderId    = (String) attrs.getOrDefault("userId", "unknown");
+        String senderName  = (String) attrs.getOrDefault("name", "User");
         String senderPhoto = (String) attrs.getOrDefault("photo", null);
 
         ChatMessage saved = chatService.saveMessage(
                 req.getConversationId(), senderId, senderName, senderPhoto, req.getContent());
+
         broker.convertAndSend("/topic/conversation/" + req.getConversationId(), saved);
+
+        chatService.getConversationById(req.getConversationId()).ifPresent(conv -> {
+            for (String participantId : conv.getParticipantIds()) {
+                if (!participantId.equals(senderId)) {
+                    Map<String, Object> notification = Map.of(
+                            "type", "NEW_MESSAGE",
+                            "conversationId", req.getConversationId(),
+                            "senderName", senderName,
+                            "preview", saved.getContent().length() > 40
+                                    ? saved.getContent().substring(0, 40) + "…"
+                                    : saved.getContent()
+                    );
+                    broker.convertAndSend("/topic/user/" + participantId + "/notifications", notification);
+                }
+            }
+        });
     }
 
     @MessageMapping("/chat.seen")
