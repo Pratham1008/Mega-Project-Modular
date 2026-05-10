@@ -1,5 +1,6 @@
 package com.megaproject.jobevent.controller;
 
+import com.megaproject.common.dto.PageDTO;
 import com.megaproject.jobevent.dto.request.JobRequest;
 import com.megaproject.jobevent.dto.response.JobResponse;
 import com.megaproject.jobevent.service.JobService;
@@ -47,11 +48,11 @@ public class JobController {
 
     /** Paginated version for frontend infinite scroll */
     @GetMapping("/paged")
-    public ResponseEntity<Page<JobResponse>> getAllPaged(
+    public ResponseEntity<PageDTO<JobResponse>> getAllPaged(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
         PageRequest pageable = PageRequest.of(page, Math.min(size, 50), Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(jobService.getAllActivePaged(pageable));
+        return ResponseEntity.ok(PageDTO.from(jobService.getAllActivePaged(pageable)));
     }
 
     @GetMapping("/my")

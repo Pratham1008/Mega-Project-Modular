@@ -1,5 +1,6 @@
 package com.megaproject.profile.controller;
 
+import com.megaproject.common.dto.PageDTO;
 import com.megaproject.profile.dto.request.*;
 import com.megaproject.profile.dto.response.*;
 import com.megaproject.profile.exception.UnauthorizedProfileAccessException;
@@ -84,13 +85,13 @@ public class ProfileController {
 
     /** Paginated profile listing — used by frontend infinite scroll */
     @GetMapping("/paged")
-    public ResponseEntity<Page<ProfileSummaryResponse>> listPaged(
+    public ResponseEntity<PageDTO<ProfileSummaryResponse>> listPaged(
             @RequestParam(required = false) ProfileType type,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "24") int size) {
         PageRequest pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "createdAt"));
-        if (type != null) return ResponseEntity.ok(profileService.getProfilesByTypePaged(type, pageable));
-        return ResponseEntity.ok(profileService.getAllProfilesPaged(pageable));
+        if (type != null) return ResponseEntity.ok(PageDTO.from(profileService.getProfilesByTypePaged(type, pageable)));
+        return ResponseEntity.ok(PageDTO.from(profileService.getAllProfilesPaged(pageable)));
     }
 
     /** Batch-mates — students/alumni from same department and passing year */

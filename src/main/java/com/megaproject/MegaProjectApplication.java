@@ -15,7 +15,8 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
         "com.megaproject.profile.repository",
         "com.megaproject.jobevent.repository",
         "com.megaproject.chat.repository",
-        "com.megaproject.donation.repository"
+        "com.megaproject.donation.repository",
+        "com.megaproject.stories.repository"
 })
 @EnableAsync
 @EnableScheduling

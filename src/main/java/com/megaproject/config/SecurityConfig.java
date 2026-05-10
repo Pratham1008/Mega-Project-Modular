@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/profiles/map").permitAll()
                         .requestMatchers(HttpMethod.GET, "/jobs/**", "/events/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/donations").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/stories", "/stories/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .anyRequest().authenticated()
                 )

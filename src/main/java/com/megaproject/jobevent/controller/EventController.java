@@ -1,5 +1,6 @@
 package com.megaproject.jobevent.controller;
 
+import com.megaproject.common.dto.PageDTO;
 import com.megaproject.jobevent.dto.request.EventRequest;
 import com.megaproject.jobevent.dto.response.EventResponse;
 import com.megaproject.jobevent.service.EventService;
@@ -47,11 +48,11 @@ public class EventController {
 
     /** Paginated version for frontend infinite scroll */
     @GetMapping("/paged")
-    public ResponseEntity<Page<EventResponse>> getAllPaged(
+    public ResponseEntity<PageDTO<EventResponse>> getAllPaged(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
         PageRequest pageable = PageRequest.of(page, Math.min(size, 50), Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(eventService.getAllActivePaged(pageable));
+        return ResponseEntity.ok(PageDTO.from(eventService.getAllActivePaged(pageable)));
     }
 
     @GetMapping("/my")
