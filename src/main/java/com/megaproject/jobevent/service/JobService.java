@@ -7,6 +7,8 @@ import com.megaproject.jobevent.mapper.JobEventMapper;
 import com.megaproject.jobevent.model.Job;
 import com.megaproject.jobevent.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +36,11 @@ public class JobService {
         return mapper.toJobResponseList(jobRepository.findByActiveTrue());
     }
 
+    /** Paginated version for frontend infinite scroll */
+    public Page<JobResponse> getAllActivePaged(Pageable pageable) {
+        return jobRepository.findByActiveTrue(pageable).map(mapper::toJobResponse);
+    }
+
     public List<JobResponse> getByCreator(String userId) {
         return mapper.toJobResponseList(
                 jobRepository.findByPostedByUserIdAndActiveTrue(userId));
@@ -53,8 +60,11 @@ public class JobService {
         return mapper.toJobResponse(jobRepository.save(job));
     }
 
-    public void softDelete(String id) {
+    public void softDelete(String id, String requesterId, String role) {
         Job job = findById(id);
+        if (!"ADMIN".equals(role) && !job.getPostedByUserId().equals(requesterId)) {
+            throw new AccessDeniedException("You can only delete your own job posts");
+        }
         job.setActive(false);
         jobRepository.save(job);
     }

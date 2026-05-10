@@ -14,6 +14,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 @RestController
 @RequestMapping("/jobs")
 @RequiredArgsConstructor
@@ -41,6 +45,15 @@ public class JobController {
         return ResponseEntity.ok(jobService.getAllActive());
     }
 
+    /** Paginated version for frontend infinite scroll */
+    @GetMapping("/paged")
+    public ResponseEntity<Page<JobResponse>> getAllPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(size, 50), Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(jobService.getAllActivePaged(pageable));
+    }
+
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
     public ResponseEntity<List<JobResponse>> getMyJobs(
@@ -64,9 +77,11 @@ public class JobController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> delete(@PathVariable String id) {
-        jobService.softDelete(id);
+    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
+    public ResponseEntity<Map<String, Object>> delete(
+            @PathVariable String id,
+            @AuthenticationPrincipal Jwt jwt) {
+        jobService.softDelete(id, jwt.getSubject(), jwt.getClaimAsString("role"));
         return ResponseEntity.ok(Map.of("success", true, "message", "Job deactivated"));
     }
 }

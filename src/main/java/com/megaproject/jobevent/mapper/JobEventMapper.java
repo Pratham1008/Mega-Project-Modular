@@ -23,6 +23,7 @@ public interface JobEventMapper {
     @Mapping(target = "organizerContact", ignore = true)
     Event toEvent(EventRequest req);
 
+    @Mapping(target = "registeredCount", expression = "java(event.getRegisteredUserIds() != null ? event.getRegisteredUserIds().size() : 0)")
     EventResponse toEventResponse(Event event);
 
     List<EventResponse> toEventResponseList(List<Event> events);

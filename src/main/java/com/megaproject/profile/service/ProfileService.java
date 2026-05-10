@@ -10,6 +10,8 @@ import com.megaproject.profile.model.*;
 import com.megaproject.profile.repository.ProfileRepository;
 import com.megaproject.auth.repository.UserRepository;
 import com.megaproject.auth.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -121,6 +123,25 @@ public class ProfileService {
     public List<ProfileSummaryResponse> getAllProfiles() {
         return profileRepository.findByDeletedFalse()
                 .stream()
+                .map(profileMapper::toSummary)
+                .toList();
+    }
+
+    // ── Paginated versions (for frontend infinite scroll) ─────────────────────
+    public Page<ProfileSummaryResponse> getProfilesByTypePaged(ProfileType type, Pageable pageable) {
+        return profileRepository.findByProfileTypeAndDeletedFalseAndApprovedTrue(type, pageable)
+                .map(profileMapper::toSummary);
+    }
+
+    public Page<ProfileSummaryResponse> getAllProfilesPaged(Pageable pageable) {
+        return profileRepository.findByDeletedFalse(pageable)
+                .map(profileMapper::toSummary);
+    }
+
+    public List<ProfileSummaryResponse> getBatchMates(String department, int passingYear) {
+        return profileRepository.findByDepartmentAndPassingYearAndDeletedFalse(department, passingYear)
+                .stream()
+                .filter(ProfileDocument::isApproved)
                 .map(profileMapper::toSummary)
                 .toList();
     }

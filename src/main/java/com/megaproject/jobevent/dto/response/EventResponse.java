@@ -22,4 +22,6 @@ public class EventResponse {
     private String createdByUserId;
     private Boolean active;
     private Instant createdAt;
+    private int registeredCount;
+    private java.util.List<String> registeredUserIds;
 }

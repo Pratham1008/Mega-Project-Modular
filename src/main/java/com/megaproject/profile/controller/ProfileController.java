@@ -10,6 +10,9 @@ import com.megaproject.profile.service.AlumniSearchService;
 import com.megaproject.profile.service.ProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -77,6 +80,25 @@ public class ProfileController {
     public ResponseEntity<List<ProfileSummaryResponse>> list(@RequestParam(required = false) ProfileType type) {
         if (type != null) return ResponseEntity.ok(profileService.getProfilesByType(type));
         return ResponseEntity.ok(profileService.getAllProfiles());
+    }
+
+    /** Paginated profile listing — used by frontend infinite scroll */
+    @GetMapping("/paged")
+    public ResponseEntity<Page<ProfileSummaryResponse>> listPaged(
+            @RequestParam(required = false) ProfileType type,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "24") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (type != null) return ResponseEntity.ok(profileService.getProfilesByTypePaged(type, pageable));
+        return ResponseEntity.ok(profileService.getAllProfilesPaged(pageable));
+    }
+
+    /** Batch-mates — students/alumni from same department and passing year */
+    @GetMapping("/batch")
+    public ResponseEntity<List<ProfileSummaryResponse>> getBatchMates(
+            @RequestParam String department,
+            @RequestParam int passingYear) {
+        return ResponseEntity.ok(profileService.getBatchMates(department, passingYear));
     }
 
     @DeleteMapping("/{userId}")

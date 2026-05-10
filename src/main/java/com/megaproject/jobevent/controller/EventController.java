@@ -14,6 +14,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 @RestController
 @RequestMapping("/events")
 @RequiredArgsConstructor
@@ -41,6 +45,15 @@ public class EventController {
         return ResponseEntity.ok(eventService.getAllActive());
     }
 
+    /** Paginated version for frontend infinite scroll */
+    @GetMapping("/paged")
+    public ResponseEntity<Page<EventResponse>> getAllPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(size, 50), Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(eventService.getAllActivePaged(pageable));
+    }
+
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
     public ResponseEntity<List<EventResponse>> getMyEvents(
@@ -63,5 +76,21 @@ public class EventController {
     public ResponseEntity<Map<String, Object>> delete(@PathVariable String id) {
         eventService.softDelete(id);
         return ResponseEntity.ok(Map.of("success", true, "message", "Event deactivated"));
+    }
+
+    /** Register current user for an event */
+    @PostMapping("/{id}/rsvp")
+    public ResponseEntity<EventResponse> rsvp(
+            @PathVariable String id,
+            @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(eventService.rsvp(id, jwt.getSubject()));
+    }
+
+    /** Unregister current user from an event */
+    @DeleteMapping("/{id}/rsvp")
+    public ResponseEntity<EventResponse> unrsvp(
+            @PathVariable String id,
+            @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(eventService.unrsvp(id, jwt.getSubject()));
     }
 }
