@@ -11,6 +11,7 @@ import com.megaproject.profile.service.ProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -90,6 +91,14 @@ public class ProfileController {
     @PatchMapping("/{userId}/approve")
     public ResponseEntity<EducationalProfileResponse> approve(@PathVariable String userId) {
         return ResponseEntity.ok(profileService.approveProfile(userId));
+    }
+
+    @PatchMapping("/{userId}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EducationalProfileResponse> changeRole(
+            @PathVariable String userId,
+            @RequestParam ProfileType type) {
+        return ResponseEntity.ok(profileService.changeProfileType(userId, type));
     }
 
     @GetMapping("/map")

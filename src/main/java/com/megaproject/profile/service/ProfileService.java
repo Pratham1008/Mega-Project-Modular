@@ -145,6 +145,23 @@ public class ProfileService {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    public EducationalProfileResponse changeProfileType(String userId, ProfileType newType) {
+        ProfileDocument doc = getDocumentByUserId(userId);
+        doc.setProfileType(newType);
+        ProfileDocument saved = profileRepository.save(doc);
+
+        if (newType == ProfileType.ALUMNI) {
+            authService.updateUserRole(userId, Role.ALUMNI);
+        } else if (newType == ProfileType.STUDENT) {
+            authService.updateUserRole(userId, Role.STUDENT);
+        } else if (newType == ProfileType.FACULTY) {
+            authService.updateUserRole(userId, Role.FACULTY);
+        }
+
+        return profileMapper.toEducationalResponse(saved);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     public EducationalProfileResponse approveProfile(String userId) {
         ProfileDocument doc = getDocumentByUserId(userId);
         doc.setApproved(true);
