@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.lang.NonNull;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
@@ -24,25 +25,10 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
     private final ProfileRepository profileRepository;
 
     @Override
-    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
-                                   WebSocketHandler wsHandler, Map<String, Object> attributes) {
-        String token = null;
+    public boolean beforeHandshake(@NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response,
+                                   @NonNull WebSocketHandler wsHandler, @NonNull Map<String, Object> attributes) {
 
-        if (request instanceof ServletServerHttpRequest servletReq) {
-            token = servletReq.getServletRequest().getParameter("token");
-        }
-
-        if (token == null || token.isBlank()) {
-            String query = request.getURI().getQuery();
-            if (query != null) {
-                for (String param : query.split("&")) {
-                    if (param.startsWith("token=")) {
-                        token = param.substring(6);
-                        break;
-                    }
-                }
-            }
-        }
+        String token = extractToken(request);
 
         if (token != null && !token.isBlank()) {
             try {
@@ -53,35 +39,62 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
                         ? jwt.getClaimAsString("role") : "USER");
 
                 profileRepository.findByUserId(userId).ifPresentOrElse(
-                    profile -> {
-                        attributes.put("name", profile.getFullName() != null
-                                ? profile.getFullName() : "User");
-                        if (profile.getPhotoUrl() != null) {
-                            attributes.put("photo", profile.getPhotoUrl());
+                        profile -> {
+                            attributes.put("name", profile.getFullName() != null
+                                    ? profile.getFullName() : "User");
+                            if (profile.getPhotoUrl() != null) {
+                                attributes.put("photo", profile.getPhotoUrl());
+                            }
+                        },
+                        () -> {
+                            String email = jwt.getClaimAsString("email");
+                            attributes.put("name", email != null ? email.split("@")[0] : "User");
                         }
-                    },
-                    () -> {
-                        String email = jwt.getClaimAsString("email");
-                        attributes.put("name", email != null ? email.split("@")[0] : "User");
-                    }
                 );
 
                 log.debug("WS auth OK userId={}", userId);
             } catch (JwtException e) {
-                log.warn("WS auth failed: {}", e.getMessage());
-                attributes.put("userId", "anonymous");
-                attributes.put("name", "Anonymous");
+                log.warn("WS JWT validation failed: {}", e.getMessage());
+                setAnonymous(attributes);
             }
         } else {
-            attributes.put("userId", "anonymous");
-            attributes.put("name", "Anonymous");
+            setAnonymous(attributes);
         }
 
         return true;
     }
 
     @Override
-    public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
-                               WebSocketHandler wsHandler, Exception exception) {
+    public void afterHandshake(@NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response,
+                               @NonNull WebSocketHandler wsHandler, Exception exception) {
+    }
+
+    private String extractToken(ServerHttpRequest request) {
+        if (request instanceof ServletServerHttpRequest servletReq) {
+            String token = servletReq.getServletRequest().getParameter("token");
+            if (token != null && !token.isBlank()) {
+                return token;
+            }
+        }
+
+        String query = request.getURI().getQuery();
+        if (query != null) {
+            for (String param : query.split("&")) {
+                if (param.startsWith("token=")) {
+                    String token = param.substring(6);
+                    if (!token.isBlank()) {
+                        return token;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private void setAnonymous(Map<String, Object> attributes) {
+        attributes.put("userId", "anonymous");
+        attributes.put("name", "Anonymous");
+        attributes.put("role", "GUEST");
     }
 }
