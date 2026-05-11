@@ -42,9 +42,13 @@ public class SuccessStoryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> delete(@PathVariable String id) {
-        storyService.softDelete(id);
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
+    public ResponseEntity<Map<String, Object>> delete(
+            @PathVariable String id,
+            @AuthenticationPrincipal Jwt jwt) {
+        boolean isAdmin = jwt.getClaimAsStringList("roles") != null
+                && jwt.getClaimAsStringList("roles").contains("ROLE_ADMIN");
+        storyService.softDelete(id, jwt.getSubject(), isAdmin);
         return ResponseEntity.ok(Map.of("success", true, "message", "Story deactivated"));
     }
 }

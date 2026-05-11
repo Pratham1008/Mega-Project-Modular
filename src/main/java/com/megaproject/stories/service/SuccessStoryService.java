@@ -41,9 +41,12 @@ public class SuccessStoryService {
                 .orElseThrow(() -> new RuntimeException("Story not found: " + id)));
     }
 
-    public void softDelete(String id) {
+    public void softDelete(String id, String userId, boolean isAdmin) {
         SuccessStory story = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Story not found: " + id));
+        if (!isAdmin && !userId.equals(story.getCreatedByUserId())) {
+            throw new RuntimeException("You can only delete stories you created.");
+        }
         story.setActive(false);
         repository.save(story);
     }
