@@ -42,6 +42,9 @@ public class Job {
     private String applyLink;
     private String contactEmail;
     private String postedByUserId;
+    
+    private Instant startDate;
+    private Instant endDate;
 
     @Builder.Default
     @Indexed

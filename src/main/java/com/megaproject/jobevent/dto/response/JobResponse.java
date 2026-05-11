@@ -25,4 +25,6 @@ public class JobResponse {
     private String postedByUserId;
     private Boolean active;
     private Instant createdAt;
+    private Instant startDate;
+    private Instant endDate;
 }
