@@ -1,11 +1,17 @@
 package com.megaproject.donation.controller;
 
 import com.megaproject.donation.dto.DonationRequest;
+import com.megaproject.donation.dto.OrderResponse;
+import com.megaproject.donation.dto.PaymentVerifyRequest;
 import com.megaproject.donation.model.Donation;
 import com.megaproject.donation.repository.DonationRepository;
+import com.megaproject.donation.service.RazorpayService;
 import com.megaproject.profile.repository.ProfileRepository;
+import com.razorpay.Order;
+import com.razorpay.RazorpayException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,12 +27,46 @@ public class DonationController {
 
     private final DonationRepository donationRepo;
     private final ProfileRepository profileRepo;
+    private final RazorpayService razorpayService;
+
+    @Value("${razorpay.key.id}")
+    private String keyId;
+
+    @PostMapping("/create-order")
+    @PreAuthorize("hasRole('ALUMNI')")
+    public ResponseEntity<?> createOrder(@Valid @RequestBody DonationRequest req) {
+        try {
+            Order order = razorpayService.createOrder(req.getAmount());
+            OrderResponse response = OrderResponse.builder()
+                    .orderId(order.get("id"))
+                    .amount(req.getAmount())
+                    .currency("INR")
+                    .keyId(keyId)
+                    .build();
+            return ResponseEntity.ok(response);
+        } catch (RazorpayException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to create Razorpay order"));
+        }
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ALUMNI')")
-    public ResponseEntity<Donation> donate(
-            @Valid @RequestBody DonationRequest req,
+    public ResponseEntity<?> donate(
+            @Valid @RequestBody PaymentVerifyRequest req,
             @AuthenticationPrincipal Jwt jwt) {
+
+        boolean isValid = razorpayService.verifySignature(
+                req.getRazorpayOrderId(),
+                req.getRazorpayPaymentId(),
+                req.getRazorpaySignature()
+        );
+
+        if (!isValid) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Payment signature verification failed"));
+        }
 
         String userId = jwt.getSubject();
         String donorName = profileRepo.findByUserId(userId)
@@ -40,7 +80,7 @@ public class DonationController {
                 .amount(req.getAmount())
                 .purpose(req.getPurpose())
                 .message(req.getMessage())
-                .paymentRef("KIT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .paymentRef(req.getRazorpayPaymentId())
                 .status("SUCCESS")
                 .build();
 
