@@ -5,6 +5,7 @@ import com.megaproject.stories.dto.SuccessStoryResponse;
 import com.megaproject.stories.model.SuccessStory;
 import com.megaproject.stories.repository.SuccessStoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,14 +39,14 @@ public class SuccessStoryService {
 
     public SuccessStoryResponse getById(String id) {
         return toResponse(repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Story not found: " + id)));
+                .orElseThrow(() -> new IllegalArgumentException("Story not found: " + id)));
     }
 
     public void softDelete(String id, String userId, boolean isAdmin) {
         SuccessStory story = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Story not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Story not found: " + id));
         if (!isAdmin && !userId.equals(story.getCreatedByUserId())) {
-            throw new RuntimeException("You can only delete stories you created.");
+            throw new AccessDeniedException("You can only delete stories you created.");
         }
         story.setActive(false);
         repository.save(story);

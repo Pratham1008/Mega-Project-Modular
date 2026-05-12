@@ -20,4 +20,5 @@ public class EventRequest {
     private Integer maxParticipants;
     private String bannerImageUrl;
     private String registrationLink;
+    private String targetAudience;   // ALL | STUDENTS_ONLY | ALUMNI_ONLY
 }

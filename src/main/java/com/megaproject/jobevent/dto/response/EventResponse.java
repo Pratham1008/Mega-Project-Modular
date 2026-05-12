@@ -19,6 +19,7 @@ public class EventResponse {
     private String bannerImageUrl;
     private Integer maxParticipants;
     private String registrationLink;
+    private String targetAudience;
     private String createdByUserId;
     private Boolean active;
     private Instant createdAt;

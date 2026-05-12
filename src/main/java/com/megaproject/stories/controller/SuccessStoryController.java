@@ -46,8 +46,7 @@ public class SuccessStoryController {
     public ResponseEntity<Map<String, Object>> delete(
             @PathVariable String id,
             @AuthenticationPrincipal Jwt jwt) {
-        boolean isAdmin = jwt.getClaimAsStringList("roles") != null
-                && jwt.getClaimAsStringList("roles").contains("ROLE_ADMIN");
+        boolean isAdmin = "ADMIN".equals(jwt.getClaimAsString("role"));
         storyService.softDelete(id, jwt.getSubject(), isAdmin);
         return ResponseEntity.ok(Map.of("success", true, "message", "Story deactivated"));
     }

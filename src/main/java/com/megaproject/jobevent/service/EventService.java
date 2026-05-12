@@ -25,6 +25,10 @@ public class EventService {
         Event event = mapper.toEvent(req);
         event.setActive(true);
         event.setCreatedByUserId(createdByUserId);
+        // Default targetAudience to ALL if not specified
+        if (event.getTargetAudience() == null || event.getTargetAudience().isBlank()) {
+            event.setTargetAudience("ALL");
+        }
         return mapper.toEventResponse(eventRepository.save(event));
     }
 
@@ -55,9 +59,19 @@ public class EventService {
         return mapper.toEventResponse(eventRepository.save(event));
     }
 
-    /** Register the current user for an event (RSVP) */
-    public EventResponse rsvp(String eventId, String userId) {
+    /** Register the current user for an event (RSVP) with audience enforcement */
+    public EventResponse rsvp(String eventId, String userId, String userRole) {
         Event event = findById(eventId);
+
+        // Enforce target audience restrictions
+        String audience = event.getTargetAudience() != null ? event.getTargetAudience() : "ALL";
+        if ("STUDENTS_ONLY".equals(audience) && !"STUDENT".equals(userRole)) {
+            throw new AccessDeniedException("This event is for students only.");
+        }
+        if ("ALUMNI_ONLY".equals(audience) && !"ALUMNI".equals(userRole)) {
+            throw new AccessDeniedException("This event is for alumni only.");
+        }
+
         if (event.getRegisteredUserIds() == null) {
             event.setRegisteredUserIds(new java.util.ArrayList<>());
         }
@@ -65,7 +79,7 @@ public class EventService {
             return mapper.toEventResponse(event); // already registered
         }
         if (event.getMaxParticipants() != null && event.getRegisteredUserIds().size() >= event.getMaxParticipants()) {
-            throw new IllegalStateException("Event is full — maximum " + event.getMaxParticipants() + " participants reached");
+            throw new IllegalStateException("Event is full — maximum " + event.getMaxParticipants() + " participants reached.");
         }
         event.getRegisteredUserIds().add(userId);
         return mapper.toEventResponse(eventRepository.save(event));
@@ -92,3 +106,4 @@ public class EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found: " + id));
     }
 }
+

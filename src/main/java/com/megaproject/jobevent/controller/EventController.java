@@ -84,7 +84,7 @@ public class EventController {
     public ResponseEntity<EventResponse> rsvp(
             @PathVariable String id,
             @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(eventService.rsvp(id, jwt.getSubject()));
+        return ResponseEntity.ok(eventService.rsvp(id, jwt.getSubject(), jwt.getClaimAsString("role")));
     }
 
     /** Unregister current user from an event */
