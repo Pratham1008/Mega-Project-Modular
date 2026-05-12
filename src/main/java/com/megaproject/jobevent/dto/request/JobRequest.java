@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.util.List;
-import java.time.Instant;
+import java.time.LocalDate;
 
 @Data
 public class JobRequest {
@@ -22,6 +22,6 @@ public class JobRequest {
     private Double salaryMax;
     private String applyLink;
     private String contactEmail;
-    private Instant startDate;
-    private Instant endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

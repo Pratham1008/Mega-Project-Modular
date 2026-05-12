@@ -151,8 +151,6 @@ public class BulkImportService {
                     profileRepository.save(profile);
 
                     result.imported++;
-                    log.info("Imported: {} ({}) as {} [passing year: {}]",
-                            fullName, email, profileType, passingYear);
 
                 } catch (Exception e) {
                     result.addError(i + 1, "Error: " + e.getMessage());

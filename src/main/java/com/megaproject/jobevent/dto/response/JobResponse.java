@@ -5,6 +5,7 @@ import com.megaproject.jobevent.model.JobType;
 import lombok.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
@@ -25,6 +26,6 @@ public class JobResponse {
     private String postedByUserId;
     private Boolean active;
     private Instant createdAt;
-    private Instant startDate;
-    private Instant endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

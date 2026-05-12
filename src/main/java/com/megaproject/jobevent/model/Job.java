@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Document(collection = "jobs")
@@ -43,8 +44,8 @@ public class Job {
     private String contactEmail;
     private String postedByUserId;
     
-    private Instant startDate;
-    private Instant endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
 
     @Builder.Default
     @Indexed
