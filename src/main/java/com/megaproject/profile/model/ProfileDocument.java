@@ -28,6 +28,7 @@ public class ProfileDocument {
     private String fullName;
 
     private String phone;
+    private String gender;
     private String bloodGroup;
     private String dateOfBirth;
 

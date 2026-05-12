@@ -31,6 +31,8 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
 
     Page<ProfileDocument> findByDeletedFalse(Pageable pageable);
 
+    Page<ProfileDocument> findByDeletedFalseAndApprovedTrue(Pageable pageable);
+
     List<ProfileDocument> findByProfileTypeAndDeletedFalseAndPassingYearLessThan(ProfileType profileType, int passingYear);
 
     @Query("{ 'profileType': ?0, 'deleted': false, 'location': { $exists: true, $nin: ['', null] } }")

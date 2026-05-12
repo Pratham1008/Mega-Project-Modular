@@ -33,7 +33,7 @@ public class BulkImportController {
     }
 
     @GetMapping("/export")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','FACULTY')")
     public ResponseEntity<byte[]> exportExcel() {
         try {
             byte[] data = exportService.exportToExcel();

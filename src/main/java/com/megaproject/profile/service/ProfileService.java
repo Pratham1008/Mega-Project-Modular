@@ -134,7 +134,7 @@ public class ProfileService {
     }
 
     public Page<ProfileSummaryResponse> getAllProfilesPaged(Pageable pageable) {
-        return profileRepository.findByDeletedFalse(pageable)
+        return profileRepository.findByDeletedFalseAndApprovedTrue(pageable)
                 .map(profileMapper::toSummary);
     }
 

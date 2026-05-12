@@ -19,15 +19,39 @@ public class BulkExportService {
 
     private final ProfileRepository profileRepository;
 
-    // Column headers matching the import format
+    /*
+     * Column headers — only fields that exist in ProfileDocument,
+     * named to match the Master Student Database format.
+     */
     private static final String[] HEADERS = {
-            "Sr. No.", "PRN", "Full Name", "Gender", "Date of Birth",
-            "Email", "Phone", "Address", "Pin Code", "City",
-            "District", "State", "Profile Type", "Admission Year",
-            "Passing Year", "Current Semester", "Department",
-            "Job Title", "Company", "Location", "Skills",
-            "Resume URL", "Photo URL", "Blood Group",
-            "LinkedIn URL", "GitHub URL", "Instagram URL", "Approved"
+            "Sr. No",
+            "PRN",
+            "Student Name ( Surname Name Middle)",
+            "Gender",
+            "Date Of Birth (MM/DD/YY)",
+            "Email ID",
+            "Mobile Number",
+            "Full  Address with Pin Code",
+            "Pin Code",
+            "City as per Domicile Certificate",
+            "Home District",
+            "State as per Domicile Certificate",
+            "Branch",
+            "Profile Type",
+            "Admission Year",
+            "Passing Year",
+            "Current Semester",
+            "Job Title",
+            "Company",
+            "Location",
+            "Skills",
+            "Resume URL",
+            "Photo URL",
+            "Blood Group",
+            "LinkedIn URL",
+            "GitHub URL",
+            "Instagram URL",
+            "Approved"
     };
 
     public byte[] exportToExcel() throws IOException {
@@ -36,7 +60,7 @@ public class BulkExportService {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-            Sheet sheet = workbook.createSheet("Profiles");
+            Sheet sheet = workbook.createSheet("CSE");
 
             // ── Header style ──
             CellStyle headerStyle = workbook.createCellStyle();
@@ -48,10 +72,10 @@ public class BulkExportService {
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
             headerStyle.setBorderBottom(BorderStyle.THIN);
 
-            // ── Title row (Row 0) ──
+            // ── Title row (Row 0) — matches Master Database ──
             Row titleRow = sheet.createRow(0);
             Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("Alumni Connect — Profile Export");
+            titleCell.setCellValue("KIT's College of Engineering Kolhapur (Empowered Autonomous)");
             CellStyle titleStyle = workbook.createCellStyle();
             Font titleFont = workbook.createFont();
             titleFont.setBold(true);
@@ -74,14 +98,14 @@ public class BulkExportService {
                 Row row = sheet.createRow(rowIdx++);
                 int col = 0;
 
-                row.createCell(col++).setCellValue(serial++);                               // Sr. No.
+                row.createCell(col++).setCellValue(serial++);                               // Sr. No
                 row.createCell(col++).setCellValue(safe(p.getRegistrationNumber()));         // PRN
-                row.createCell(col++).setCellValue(safe(p.getFullName()));                   // Full Name
-                row.createCell(col++).setCellValue("");                                      // Gender (not stored)
+                row.createCell(col++).setCellValue(safe(p.getFullName()));                   // Student Name
+                row.createCell(col++).setCellValue(safe(p.getGender()));                     // Gender
                 row.createCell(col++).setCellValue(safe(p.getDateOfBirth()));                // DOB
 
-                row.createCell(col++).setCellValue(safe(p.getEmail()));                      // Email
-                row.createCell(col++).setCellValue(safe(p.getPhone()));                      // Phone
+                row.createCell(col++).setCellValue(safe(p.getEmail()));                      // Email ID
+                row.createCell(col++).setCellValue(safe(p.getPhone()));                      // Mobile Number
 
                 // Address fields
                 String street = "", pinCode = "", city = "", district = "", state = "";
@@ -92,12 +116,13 @@ public class BulkExportService {
                     state = safe(p.getAddress().getState());
                     district = city; // district not stored separately, use city
                 }
-                row.createCell(col++).setCellValue(street);                                  // Address
+                row.createCell(col++).setCellValue(street);                                  // Full Address with Pin Code
                 row.createCell(col++).setCellValue(pinCode);                                 // Pin Code
-                row.createCell(col++).setCellValue(city);                                    // City
-                row.createCell(col++).setCellValue(district);                                // District
-                row.createCell(col++).setCellValue(state);                                   // State
+                row.createCell(col++).setCellValue(city);                                    // City as per Domicile Certificate
+                row.createCell(col++).setCellValue(district);                                // Home District
+                row.createCell(col++).setCellValue(state);                                   // State as per Domicile Certificate
 
+                row.createCell(col++).setCellValue(safe(p.getDepartment()));                  // Branch
                 row.createCell(col++).setCellValue(
                         p.getProfileType() != null ? p.getProfileType().name() : "");        // Profile Type
                 row.createCell(col++).setCellValue(
@@ -106,7 +131,6 @@ public class BulkExportService {
                         p.getPassingYear() != null ? p.getPassingYear() : 0);                // Passing Year
                 row.createCell(col++).setCellValue(
                         p.getCurrentSemester() != null ? p.getCurrentSemester() : 0);        // Current Semester
-                row.createCell(col++).setCellValue(safe(p.getDepartment()));                  // Department
 
                 row.createCell(col++).setCellValue(safe(p.getJobTitle()));                   // Job Title
                 row.createCell(col++).setCellValue(safe(p.getCompany()));                    // Company
@@ -128,9 +152,9 @@ public class BulkExportService {
                     github = safe(p.getSocials().getGithubUrl());
                     instagram = safe(p.getSocials().getInstagramUrl());
                 }
-                row.createCell(col++).setCellValue(linkedin);                                // LinkedIn
-                row.createCell(col++).setCellValue(github);                                  // GitHub
-                row.createCell(col++).setCellValue(instagram);                               // Instagram
+                row.createCell(col++).setCellValue(linkedin);                                // LinkedIn URL
+                row.createCell(col++).setCellValue(github);                                  // GitHub URL
+                row.createCell(col++).setCellValue(instagram);                               // Instagram URL
 
                 row.createCell(col).setCellValue(p.isApproved() ? "Yes" : "No");            // Approved
             }

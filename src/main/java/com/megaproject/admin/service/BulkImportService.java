@@ -131,6 +131,7 @@ public class BulkImportService {
                             .email(email)
                             .fullName(cleanName(fullName))
                             .phone(cleanPhone(phone))
+                            .gender(gender != null ? gender.trim() : null)
                             .dateOfBirth(dob)
                             .department(branch != null && !branch.isBlank() ? branch.trim() : "CSE")
                             .registrationNumber(prn.trim())
