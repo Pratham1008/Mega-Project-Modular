@@ -75,12 +75,17 @@ public class EventService {
         if (event.getRegisteredUserIds() == null) {
             event.setRegisteredUserIds(new java.util.ArrayList<>());
         }
+        
+        // Prevent duplicate registrations
         if (event.getRegisteredUserIds().contains(userId)) {
-            return mapper.toEventResponse(event); // already registered
+            return mapper.toEventResponse(event);
         }
+        
+        // Check capacity
         if (event.getMaxParticipants() != null && event.getRegisteredUserIds().size() >= event.getMaxParticipants()) {
             throw new IllegalStateException("Event is full — maximum " + event.getMaxParticipants() + " participants reached.");
         }
+        
         event.getRegisteredUserIds().add(userId);
         return mapper.toEventResponse(eventRepository.save(event));
     }

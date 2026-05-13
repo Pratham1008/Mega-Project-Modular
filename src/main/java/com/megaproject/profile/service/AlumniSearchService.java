@@ -33,33 +33,38 @@ public class AlumniSearchService {
     public List<AlumniSearchResponse> searchWithFilters(
             String query, String department, String company, Integer passingYear, String location) {
 
-        Query mongoQuery;
+        Query mongoQuery = new Query();
+        List<Criteria> criteriaList = new java.util.ArrayList<>();
+
+        criteriaList.add(Criteria.where("profileType").in(ProfileType.ALUMNI, ProfileType.STUDENT));
+        criteriaList.add(Criteria.where("deleted").is(false));
+        criteriaList.add(Criteria.where("approved").is(true));
 
         if (query != null && !query.isBlank()) {
-            TextCriteria textCriteria = TextCriteria.forDefaultLanguage().matchingPhrase(query);
-            mongoQuery = TextQuery.queryText(textCriteria).sortByScore();
-        } else {
-            mongoQuery = new Query();
+            criteriaList.add(new Criteria().orOperator(
+                    Criteria.where("fullName").regex(query, "i"),
+                    Criteria.where("company").regex(query, "i"),
+                    Criteria.where("jobTitle").regex(query, "i"),
+                    Criteria.where("department").regex(query, "i"),
+                    Criteria.where("skills").regex(query, "i")
+            ));
         }
-
-        Criteria criteria = Criteria.where("profileType").is(ProfileType.ALUMNI)
-                .and("deleted").is(false)
-                .and("approved").is(true);
 
         if (department != null && !department.isBlank()) {
-            criteria = criteria.and("department").regex(department, "i");
+            criteriaList.add(Criteria.where("department").regex(department, "i"));
         }
         if (company != null && !company.isBlank()) {
-            criteria = criteria.and("company").regex(company, "i");
+            criteriaList.add(Criteria.where("company").regex(company, "i"));
         }
         if (passingYear != null) {
-            criteria = criteria.and("passingYear").is(passingYear);
+            criteriaList.add(Criteria.where("passingYear").is(passingYear));
         }
         if (location != null && !location.isBlank()) {
-            criteria = criteria.and("location").regex(location, "i");
+            criteriaList.add(Criteria.where("location").regex(location, "i"));
         }
 
-        mongoQuery.addCriteria(criteria);
+        Criteria finalCriteria = new Criteria().andOperator(criteriaList.toArray(new Criteria[0]));
+        mongoQuery.addCriteria(finalCriteria);
         mongoQuery.limit(100);
 
         List<ProfileDocument> results = mongoTemplate.find(mongoQuery, ProfileDocument.class);
