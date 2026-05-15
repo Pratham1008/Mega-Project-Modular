@@ -127,7 +127,7 @@ public class ProfileService {
                 .toList();
     }
 
-    // ── Paginated versions (for frontend infinite scroll) ─────────────────────
+    
     public Page<ProfileSummaryResponse> getProfilesByTypePaged(ProfileType type, Pageable pageable) {
         return profileRepository.findByProfileTypeAndDeletedFalseAndApprovedTrue(type, pageable)
                 .map(profileMapper::toSummary);
@@ -198,7 +198,7 @@ public class ProfileService {
     private ProfileType determineType(int passingYear) {
         int currentYear = java.time.Year.now().getValue();
         int currentMonth = java.time.LocalDate.now().getMonthValue();
-        // If passing year is in the past, or if passing year is current year and we are past August, they are ALUMNI.
+        
         if (passingYear < currentYear || (passingYear == currentYear && currentMonth >= 8)) {
             return ProfileType.ALUMNI;
         }

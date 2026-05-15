@@ -7,10 +7,7 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
-/**
- * Stable page response DTO that replaces Spring's PageImpl serialization.
- * Guarantees a consistent JSON structure regardless of Spring Data version.
- */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

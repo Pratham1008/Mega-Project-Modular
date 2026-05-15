@@ -25,7 +25,7 @@ public class EventService {
         Event event = mapper.toEvent(req);
         event.setActive(true);
         event.setCreatedByUserId(createdByUserId);
-        // Default targetAudience to ALL if not specified
+        
         if (event.getTargetAudience() == null || event.getTargetAudience().isBlank()) {
             event.setTargetAudience("ALL");
         }
@@ -40,7 +40,7 @@ public class EventService {
         return mapper.toEventResponseList(eventRepository.findByActiveTrue());
     }
 
-    /** Paginated version for frontend infinite scroll */
+    
     public Page<EventResponse> getAllActivePaged(Pageable pageable) {
         return eventRepository.findByActiveTrue(pageable).map(mapper::toEventResponse);
     }
@@ -59,11 +59,11 @@ public class EventService {
         return mapper.toEventResponse(eventRepository.save(event));
     }
 
-    /** Register the current user for an event (RSVP) with audience enforcement */
+    
     public EventResponse rsvp(String eventId, String userId, String userRole) {
         Event event = findById(eventId);
 
-        // Enforce target audience restrictions
+        
         String audience = event.getTargetAudience() != null ? event.getTargetAudience() : "ALL";
         if ("STUDENTS_ONLY".equals(audience) && !"STUDENT".equals(userRole)) {
             throw new AccessDeniedException("This event is for students only.");
@@ -76,12 +76,12 @@ public class EventService {
             event.setRegisteredUserIds(new java.util.ArrayList<>());
         }
         
-        // Prevent duplicate registrations
+        
         if (event.getRegisteredUserIds().contains(userId)) {
             return mapper.toEventResponse(event);
         }
         
-        // Check capacity
+        
         if (event.getMaxParticipants() != null && event.getRegisteredUserIds().size() >= event.getMaxParticipants()) {
             throw new IllegalStateException("Event is full — maximum " + event.getMaxParticipants() + " participants reached.");
         }
@@ -90,7 +90,7 @@ public class EventService {
         return mapper.toEventResponse(eventRepository.save(event));
     }
 
-    /** Unregister the current user from an event */
+    
     public EventResponse unrsvp(String eventId, String userId) {
         Event event = findById(eventId);
         if (event.getRegisteredUserIds() != null) {

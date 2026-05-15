@@ -46,7 +46,7 @@ public class EventController {
         return ResponseEntity.ok(eventService.getAllActive());
     }
 
-    /** Paginated version for frontend infinite scroll */
+    
     @GetMapping("/paged")
     public ResponseEntity<PageDTO<EventResponse>> getAllPaged(
             @RequestParam(defaultValue = "0") int page,
@@ -79,7 +79,7 @@ public class EventController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Event deactivated"));
     }
 
-    /** Register current user for an event */
+    
     @PostMapping("/{id}/rsvp")
     public ResponseEntity<EventResponse> rsvp(
             @PathVariable String id,
@@ -87,7 +87,7 @@ public class EventController {
         return ResponseEntity.ok(eventService.rsvp(id, jwt.getSubject(), jwt.getClaimAsString("role")));
     }
 
-    /** Unregister current user from an event */
+    
     @DeleteMapping("/{id}/rsvp")
     public ResponseEntity<EventResponse> unrsvp(
             @PathVariable String id,

@@ -19,17 +19,17 @@ public class SuccessStory {
     private String title;
     private String description;
 
-    /** The featured person's details */
+    
     private String personName;
     private String personDesignation;
-    private String personBatch;        // e.g. "Class of 2015"
+    private String personBatch;        
     private String personDepartment;
     private String personPhotoUrl;
 
-    /** Optional banner/story image */
+    
     private String storyImageUrl;
 
-    /** Quote from the person */
+    
     private String quote;
 
     private String createdByUserId;

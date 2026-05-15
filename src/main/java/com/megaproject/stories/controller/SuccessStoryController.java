@@ -21,7 +21,7 @@ public class SuccessStoryController {
 
     private final SuccessStoryService storyService;
 
-    /** Public — used by landing page */
+    
     @GetMapping
     public ResponseEntity<List<SuccessStoryResponse>> getAll() {
         return ResponseEntity.ok(storyService.getAllActive());

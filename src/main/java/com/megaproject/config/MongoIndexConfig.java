@@ -22,14 +22,14 @@ public class MongoIndexConfig {
         log.info("Ensuring TTL indexes are present in MongoDB...");
         
         try {
-            // OTPs expire after 10 minutes based on expiryDate
-            mongoTemplate.indexOps("otps").ensureIndex(
-                new Index().on("expiryDate", Sort.Direction.ASC).expire(0, TimeUnit.SECONDS)
+            
+            mongoTemplate.indexOps("otps").createIndex(
+                    new Index().on("expiryDate", Sort.Direction.ASC).expire(0, TimeUnit.SECONDS)
             );
             
-            // Refresh tokens expire after 7 days based on expiryDate
-            mongoTemplate.indexOps("refresh_tokens").ensureIndex(
-                new Index().on("expiryDate", Sort.Direction.ASC).expire(0, TimeUnit.SECONDS)
+            
+            mongoTemplate.indexOps("refresh_tokens").createIndex(
+                    new Index().on("expiryDate", Sort.Direction.ASC).expire(0, TimeUnit.SECONDS)
             );
             
             log.info("TTL indexes created successfully.");

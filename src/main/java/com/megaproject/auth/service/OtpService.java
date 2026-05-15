@@ -17,10 +17,10 @@ public class OtpService {
     private final OtpRepository otpRepository;
     private final EmailService emailService;
 
-    private static final long OTP_EXPIRY_SECONDS = 600; // 10 minutes
+    private static final long OTP_EXPIRY_SECONDS = 600; 
 
     public void generateAndSend(String userId, String email, OtpPurpose purpose) {
-        // Delete any existing OTP for this user + purpose
+        
         otpRepository.deleteAllByUserIdAndPurpose(userId, purpose);
 
         String code = String.format("%06d", new SecureRandom().nextInt(999999));
@@ -34,7 +34,7 @@ public class OtpService {
 
         otpRepository.save(otp);
 
-        // Send email directly (no Kafka - direct service call)
+        
         if (purpose == OtpPurpose.VERIFICATION) {
             emailService.sendVerificationOtp(email, code);
         } else {
@@ -51,6 +51,6 @@ public class OtpService {
             throw new com.megaproject.auth.exception.AuthException("OTP has expired");
         }
 
-        otpRepository.delete(otp); // consume the OTP
+        otpRepository.delete(otp); 
     }
 }

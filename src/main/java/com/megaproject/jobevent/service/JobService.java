@@ -36,7 +36,7 @@ public class JobService {
         return mapper.toJobResponseList(jobRepository.findByActiveTrue());
     }
 
-    /** Paginated version for frontend infinite scroll */
+    
     public Page<JobResponse> getAllActivePaged(Pageable pageable) {
         return jobRepository.findByActiveTrue(pageable).map(mapper::toJobResponse);
     }

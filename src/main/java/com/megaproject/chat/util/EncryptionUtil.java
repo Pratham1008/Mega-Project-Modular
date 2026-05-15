@@ -41,7 +41,7 @@ public class EncryptionUtil {
 
     public String encrypt(String plainText) {
         if (plainText == null || plainText.isEmpty() || plainText.startsWith(PREFIX)) {
-            return plainText; // already encrypted or empty
+            return plainText; 
         }
 
         try {
@@ -61,13 +61,13 @@ public class EncryptionUtil {
             return PREFIX + Base64.getEncoder().encodeToString(byteBuffer.array());
         } catch (Exception e) {
             log.error("Error encrypting chat message", e);
-            throw new RuntimeException("Failed to encrypt message", e); // Fail fast to prevent saving plaintext
+            throw new RuntimeException("Failed to encrypt message", e); 
         }
     }
 
     public String decrypt(String cipherTextWithPrefix) {
         if (cipherTextWithPrefix == null || !cipherTextWithPrefix.startsWith(PREFIX)) {
-            // Legacy plaintext message
+            
             return cipherTextWithPrefix;
         }
 

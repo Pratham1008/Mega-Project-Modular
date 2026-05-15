@@ -46,7 +46,7 @@ public class JobController {
         return ResponseEntity.ok(jobService.getAllActive());
     }
 
-    /** Paginated version for frontend infinite scroll */
+    
     @GetMapping("/paged")
     public ResponseEntity<PageDTO<JobResponse>> getAllPaged(
             @RequestParam(defaultValue = "0") int page,

@@ -17,13 +17,13 @@ public class Conversation {
     @Id
     private String id;
 
-    /** Display name — null for DMs (derived from participants), set for groups */
+    
     private String title;
 
     @Builder.Default
     private boolean group = false;
 
-    /** User IDs of all participants */
+    
     @Builder.Default
     private List<String> participantIds = new ArrayList<>();
 

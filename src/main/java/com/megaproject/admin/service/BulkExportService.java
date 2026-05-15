@@ -19,11 +19,7 @@ public class BulkExportService {
 
     private final ProfileRepository profileRepository;
 
-    /*
-     * Column headers — only fields that exist in ProfileDocument,
-     * named to match the Master Student Database format.
-     */
-    private static final String[] HEADERS = {
+        private static final String[] HEADERS = {
             "Sr. No",
             "PRN",
             "Student Name ( Surname Name Middle)",
@@ -62,7 +58,7 @@ public class BulkExportService {
 
             Sheet sheet = workbook.createSheet("CSE");
 
-            // ── Header style ──
+            
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -72,7 +68,7 @@ public class BulkExportService {
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
             headerStyle.setBorderBottom(BorderStyle.THIN);
 
-            // ── Title row (Row 0) — matches Master Database ──
+            
             Row titleRow = sheet.createRow(0);
             Cell titleCell = titleRow.createCell(0);
             titleCell.setCellValue("KIT's College of Engineering Kolhapur (Empowered Autonomous)");
@@ -83,7 +79,7 @@ public class BulkExportService {
             titleStyle.setFont(titleFont);
             titleCell.setCellStyle(titleStyle);
 
-            // ── Column headers (Row 1) ──
+            
             Row headerRow = sheet.createRow(1);
             for (int i = 0; i < HEADERS.length; i++) {
                 Cell cell = headerRow.createCell(i);
@@ -91,23 +87,23 @@ public class BulkExportService {
                 cell.setCellStyle(headerStyle);
             }
 
-            // ── Data rows (Row 2+) ──
+            
             int rowIdx = 2;
             int serial = 1;
             for (ProfileDocument p : profiles) {
                 Row row = sheet.createRow(rowIdx++);
                 int col = 0;
 
-                row.createCell(col++).setCellValue(serial++);                               // Sr. No
-                row.createCell(col++).setCellValue(safe(p.getRegistrationNumber()));         // PRN
-                row.createCell(col++).setCellValue(safe(p.getFullName()));                   // Student Name
-                row.createCell(col++).setCellValue(safe(p.getGender()));                     // Gender
-                row.createCell(col++).setCellValue(safe(p.getDateOfBirth()));                // DOB
+                row.createCell(col++).setCellValue(serial++);                               
+                row.createCell(col++).setCellValue(safe(p.getRegistrationNumber()));         
+                row.createCell(col++).setCellValue(safe(p.getFullName()));                   
+                row.createCell(col++).setCellValue(safe(p.getGender()));                     
+                row.createCell(col++).setCellValue(safe(p.getDateOfBirth()));                
 
-                row.createCell(col++).setCellValue(safe(p.getEmail()));                      // Email ID
-                row.createCell(col++).setCellValue(safe(p.getPhone()));                      // Mobile Number
+                row.createCell(col++).setCellValue(safe(p.getEmail()));                      
+                row.createCell(col++).setCellValue(safe(p.getPhone()));                      
 
-                // Address fields
+                
                 String street = "", pinCode = "", city = "", district = "", state = "";
                 if (p.getAddress() != null) {
                     street = safe(p.getAddress().getStreet());
@@ -156,10 +152,10 @@ public class BulkExportService {
                 row.createCell(col++).setCellValue(github);                                  // GitHub URL
                 row.createCell(col++).setCellValue(instagram);                               // Instagram URL
 
-                row.createCell(col).setCellValue(p.isApproved() ? "Yes" : "No");            // Approved
+                row.createCell(col).setCellValue(p.isApproved() ? "Yes" : "No");            
             }
 
-            // Auto-size columns
+            
             for (int i = 0; i < HEADERS.length; i++) {
                 sheet.autoSizeColumn(i);
             }

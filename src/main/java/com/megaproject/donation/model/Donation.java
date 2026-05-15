@@ -20,22 +20,19 @@ public class Donation {
     private String donorName;
     private String donorEmail;
 
-    /** In INR (paisa stored as double for simplicity) */
+    
     private Double amount;
 
-    /**
-     * Purpose of donation — one of:
-     * SCHOLARSHIP | EVENT | INFRASTRUCTURE | LIBRARY | SPORTS | OTHER
-     */
+    
     private String purpose;
 
     private String message;
 
-    /** Mock payment reference — UUID generated server-side */
+    
     private String paymentRef;
 
     @Builder.Default
-    private String status = "SUCCESS";   // always SUCCESS for mock
+    private String status = "SUCCESS";   
 
     @CreatedDate
     private Instant paidAt;

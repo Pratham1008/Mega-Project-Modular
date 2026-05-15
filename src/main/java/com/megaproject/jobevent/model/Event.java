@@ -42,7 +42,7 @@ public class Event {
     private Integer maxParticipants;
     private List<String> registeredUserIds;
     private String registrationLink;
-    private String targetAudience;   // ALL | STUDENTS_ONLY | ALUMNI_ONLY
+    private String targetAudience;   
     private String createdByUserId;
 
     @Builder.Default

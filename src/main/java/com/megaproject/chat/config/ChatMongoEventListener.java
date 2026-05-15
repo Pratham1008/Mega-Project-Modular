@@ -25,8 +25,8 @@ public class ChatMongoEventListener extends AbstractMongoEventListener<ChatMessa
 
     @Override
     public void onAfterSave(AfterSaveEvent<ChatMessage> event) {
-        // Restore to plaintext after saving so the returned object in memory 
-        // remains usable for WebSocket broadcasting
+        
+        
         ChatMessage message = event.getSource();
         if (message.getContent() != null) {
             message.setContent(encryptionUtil.decrypt(message.getContent()));
@@ -35,7 +35,7 @@ public class ChatMongoEventListener extends AbstractMongoEventListener<ChatMessa
 
     @Override
     public void onAfterConvert(AfterConvertEvent<ChatMessage> event) {
-        // Decrypt when reading from the database
+        
         ChatMessage message = event.getSource();
         if (message.getContent() != null) {
             message.setContent(encryptionUtil.decrypt(message.getContent()));

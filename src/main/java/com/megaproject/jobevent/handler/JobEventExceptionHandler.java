@@ -27,14 +27,12 @@ public class JobEventExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, msg, req.getRequestURI());
     }
 
-    /** Event is full or other business-rule violations → 409 Conflict */
-    @ExceptionHandler(IllegalStateException.class)
+        @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleConflict(IllegalStateException ex, HttpServletRequest req) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI());
     }
 
-    /** Audience restriction or ownership check → 403 Forbidden */
-    @ExceptionHandler(AccessDeniedException.class)
+        @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest req) {
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), req.getRequestURI());
     }

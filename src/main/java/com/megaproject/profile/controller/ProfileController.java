@@ -83,7 +83,7 @@ public class ProfileController {
         return ResponseEntity.ok(profileService.getAllProfiles());
     }
 
-    /** Paginated profile listing — used by frontend infinite scroll */
+    
     @GetMapping("/paged")
     public ResponseEntity<PageDTO<ProfileSummaryResponse>> listPaged(
             @RequestParam(required = false) ProfileType type,
@@ -94,7 +94,7 @@ public class ProfileController {
         return ResponseEntity.ok(PageDTO.from(profileService.getAllProfilesPaged(pageable)));
     }
 
-    /** Batch-mates — students/alumni from same department and passing year */
+    
     @GetMapping("/batch")
     public ResponseEntity<List<ProfileSummaryResponse>> getBatchMates(
             @RequestParam String department,

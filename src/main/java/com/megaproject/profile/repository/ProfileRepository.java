@@ -26,7 +26,7 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
 
     List<ProfileDocument> findByProfileTypeAndDeletedFalse(ProfileType profileType);
 
-    // ── Paginated versions ────────────────────────────────────────────────────
+    
     Page<ProfileDocument> findByProfileTypeAndDeletedFalseAndApprovedTrue(ProfileType profileType, Pageable pageable);
 
     Page<ProfileDocument> findByDeletedFalse(Pageable pageable);

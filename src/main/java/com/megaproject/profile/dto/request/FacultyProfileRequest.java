@@ -27,7 +27,7 @@ public class FacultyProfileRequest {
     @Valid
     private SocialsRequest socials;
 
-    // Faculty-specific
+    
     private String designation;
     private String officeLocation;
     private String researchInterests;

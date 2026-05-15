@@ -50,7 +50,7 @@ public class EducationalProfileRequest {
 
     private Set<String> skills;
 
-    // Alumni employment info
+    
     private String jobTitle;
     private String company;
 

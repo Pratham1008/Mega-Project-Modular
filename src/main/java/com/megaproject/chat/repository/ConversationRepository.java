@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface ConversationRepository extends MongoRepository<Conversation, String> {
 
-    /** All conversations a user participates in, newest first */
+    
     List<Conversation> findByParticipantIdsContainingOrderByLastMessageAtDesc(String userId);
 
     @Query("{ 'group': false, 'participantIds': { $all: [?0, ?1] } }")

@@ -19,9 +19,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // Apply rate limiting to all API endpoints, but exclude static assets if any
+        
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/ws/**"); // Exclude websocket endpoints
+                .excludePathPatterns("/ws/**"); 
     }
 }

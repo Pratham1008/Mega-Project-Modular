@@ -15,8 +15,8 @@ import java.util.UUID;
 @Getter
 public class JwtConfig {
 
-    private final long accessTokenExpirySeconds = 3600 * 24L;       // 24 hours
-    private final long refreshTokenExpirySeconds = 3600 * 24 * 7L;  // 7 days
+    private final long accessTokenExpirySeconds = 3600 * 24L;       
+    private final long refreshTokenExpirySeconds = 3600 * 24 * 7L;  
 
     private RSAPublicKey publicKey;
     private RSAPrivateKey privateKey;
