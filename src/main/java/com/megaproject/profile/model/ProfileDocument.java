@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.util.Set;
+import java.util.List;
 
 @Document(collection = "profiles")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -70,7 +71,9 @@ public class ProfileDocument {
 
     private String designation;
     private String officeLocation;
-    private String researchInterests;
+    private String specialization;
+    private List<String> degrees;
+    private Integer publications;
 
     @CreatedDate
     private Instant createdAt;

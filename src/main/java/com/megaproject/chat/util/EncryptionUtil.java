@@ -31,8 +31,6 @@ public class EncryptionUtil {
 
     @PostConstruct
     public void init() {
-        if (encryptionKeyString == null || encryptionKeyString.length() < 32) {
-        }
         String padded = String.format("%-32s", encryptionKeyString == null ? "defaultFallback" : encryptionKeyString).replace(' ', '0');
         byte[] keyBytes = padded.substring(0, 32).getBytes(StandardCharsets.UTF_8);
         this.secretKey = new SecretKeySpec(keyBytes, "AES");

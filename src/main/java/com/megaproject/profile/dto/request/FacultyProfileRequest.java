@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class FacultyProfileRequest {
@@ -30,5 +31,7 @@ public class FacultyProfileRequest {
     
     private String designation;
     private String officeLocation;
-    private String researchInterests;
+    private String specialization;
+    private List<String> degrees;
+    private Integer publications;
 }

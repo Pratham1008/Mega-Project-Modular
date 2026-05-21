@@ -2,6 +2,7 @@ package com.megaproject.profile.dto.response;
 
 import com.megaproject.profile.model.ProfileType;
 import lombok.*;
+import java.util.List;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class FacultyProfileResponse {
@@ -17,6 +18,8 @@ public class FacultyProfileResponse {
     private SocialsResponse socials;
     private String designation;
     private String officeLocation;
-    private String researchInterests;
+    private String specialization;
+    private List<String> degrees;
+    private Integer publications;
     private boolean approved;
 }

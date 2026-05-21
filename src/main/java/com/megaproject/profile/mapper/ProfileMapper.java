@@ -16,7 +16,9 @@ public interface ProfileMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "designation", ignore = true)
     @Mapping(target = "officeLocation", ignore = true)
-    @Mapping(target = "researchInterests", ignore = true)
+    @Mapping(target = "specialization", ignore = true)
+    @Mapping(target = "degrees", ignore = true)
+    @Mapping(target = "publications", ignore = true)
     ProfileDocument toDocument(EducationalProfileRequest req);
 
     @Mapping(target = "id", ignore = true)
@@ -64,7 +66,9 @@ public interface ProfileMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "designation", ignore = true)
     @Mapping(target = "officeLocation", ignore = true)
-    @Mapping(target = "researchInterests", ignore = true)
+    @Mapping(target = "specialization", ignore = true)
+    @Mapping(target = "degrees", ignore = true)
+    @Mapping(target = "publications", ignore = true)
     void updateDocumentFromRequest(EducationalProfileRequest req, @MappingTarget ProfileDocument doc);
 
     @Mapping(target = "id", ignore = true)
