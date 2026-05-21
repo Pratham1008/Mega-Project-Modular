@@ -27,7 +27,7 @@ public class JobController {
     private final JobService jobService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
+    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI','FACULTY')")
     public ResponseEntity<JobResponse> create(
             @Valid @RequestBody JobRequest req,
             @AuthenticationPrincipal Jwt jwt) {
@@ -56,7 +56,7 @@ public class JobController {
     }
 
     @GetMapping("/my")
-    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
+    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI','FACULTY')")
     public ResponseEntity<List<JobResponse>> getMyJobs(
             @AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(jobService.getByCreator(jwt.getSubject()));
@@ -68,7 +68,7 @@ public class JobController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
+    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI','FACULTY')")
     public ResponseEntity<JobResponse> update(
             @PathVariable String id,
             @Valid @RequestBody JobRequest req,
@@ -78,7 +78,7 @@ public class JobController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI')")
+    @PreAuthorize("hasAnyRole('ADMIN','ALUMNI','FACULTY')")
     public ResponseEntity<Map<String, Object>> delete(
             @PathVariable String id,
             @AuthenticationPrincipal Jwt jwt) {

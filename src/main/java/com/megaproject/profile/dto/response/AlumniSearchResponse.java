@@ -6,6 +6,7 @@ public class AlumniSearchResponse {
     private String userId;
     private String fullName;
     private String email;
+    private String profileType;
     private String jobTitle;
     private String company;
     private String location;

@@ -3,6 +3,7 @@ package com.megaproject.chat.controller;
 import com.megaproject.chat.dto.*;
 import com.megaproject.chat.model.*;
 import com.megaproject.chat.service.ChatService;
+import com.megaproject.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.messaging.handler.annotation.*;
@@ -21,6 +22,7 @@ public class ChatController {
 
     private final ChatService chatService;
     private final SimpMessagingTemplate broker;
+    private final FcmService fcmService;
 
     @PostMapping("/dm/{otherUserId}")
     public ResponseEntity<?> startDm(
@@ -55,6 +57,47 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getMessages(conversationId, page, size));
     }
 
+    // REST endpoint for sending messages (used by mobile app)
+    @PostMapping("/messages/{conversationId}")
+    public ResponseEntity<?> sendMessageRest(
+            @PathVariable String conversationId,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal Jwt jwt) {
+        String senderId = jwt.getSubject();
+        String senderName = jwt.getClaimAsString("name");
+        if (senderName == null || senderName.isBlank()) senderName = "User";
+        String content = body.get("content");
+        if (content == null || content.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Content is required"));
+        }
+
+        ChatMessage saved = chatService.saveMessage(conversationId, senderId, senderName, null, content);
+
+        // Broadcast via WebSocket for web clients
+        broker.convertAndSend("/topic/conversation/" + conversationId, saved);
+
+        // Send FCM push notification to other participants
+        String finalSenderName = senderName;
+        chatService.getConversationById(conversationId).ifPresent(conv -> {
+            for (String participantId : conv.getParticipantIds()) {
+                if (!participantId.equals(senderId)) {
+                    String preview = saved.getContent().length() > 60
+                            ? saved.getContent().substring(0, 60) + "…"
+                            : saved.getContent();
+                    fcmService.sendToUser(participantId, finalSenderName, preview,
+                            Map.of("type", "CHAT_MESSAGE", "conversationId", conversationId));
+
+                    // Also notify via WebSocket
+                    broker.convertAndSend("/topic/user/" + participantId + "/notifications",
+                            Map.of("type", "NEW_MESSAGE", "conversationId", conversationId,
+                                    "senderName", finalSenderName, "preview", preview));
+                }
+            }
+        });
+
+        return ResponseEntity.ok(saved);
+    }
+
     @GetMapping("/unread")
     public ResponseEntity<Map<String, Long>> unread(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(chatService.getUnreadCounts(jwt.getSubject()));
@@ -75,13 +118,18 @@ public class ChatController {
         chatService.getConversationById(req.getConversationId()).ifPresent(conv -> {
             for (String participantId : conv.getParticipantIds()) {
                 if (!participantId.equals(senderId)) {
+                    String preview = saved.getContent().length() > 40
+                            ? saved.getContent().substring(0, 40) + "…"
+                            : saved.getContent();
+                    // Send FCM push notification
+                    fcmService.sendToUser(participantId, senderName, preview,
+                            Map.of("type", "CHAT_MESSAGE", "conversationId", req.getConversationId()));
+
                     Map<String, Object> notification = Map.of(
                             "type", "NEW_MESSAGE",
                             "conversationId", req.getConversationId(),
                             "senderName", senderName,
-                            "preview", saved.getContent().length() > 40
-                                    ? saved.getContent().substring(0, 40) + "…"
-                                    : saved.getContent()
+                            "preview", preview
                     );
                     broker.convertAndSend("/topic/user/" + participantId + "/notifications", notification);
                 }

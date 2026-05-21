@@ -24,13 +24,11 @@ public class GraduationCronService {
     @Scheduled(cron = "0 0 0 1 8 *")
     public void promoteStudentsToAlumni() {
         int currentYear = Year.now().getValue();
-        log.info("Promoting students to alumni for passing year < {}", currentYear);
 
         List<ProfileDocument> eligibleStudents = profileRepository
                 .findByProfileTypeAndDeletedFalseAndPassingYearLessThan(ProfileType.STUDENT, currentYear);
 
         if (eligibleStudents.isEmpty()) {
-            log.info("No eligible students found for promotion.");
             return;
         }
 
@@ -45,7 +43,5 @@ public class GraduationCronService {
                 log.error("Failed to promote user {} to ALUMNI", student.getUserId(), e);
             }
         }
-
-        log.info("Promoted {} students to ALUMNI status.", count);
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import com.megaproject.profile.dto.response.AlumniSearchResponse;
 
 @Service
 @RequiredArgsConstructor
@@ -161,12 +162,109 @@ public class BulkExportService {
             }
 
             workbook.write(out);
-            log.info("Exported {} profiles to Excel", profiles.size());
             return out.toByteArray();
         }
     }
 
     private String safe(String val) {
         return val != null ? val : "";
+    }
+
+    /**
+     * Export a filtered set of profiles (from search results) to Excel.
+     */
+    public byte[] exportFilteredToExcel(List<AlumniSearchResponse> results) throws IOException {
+        // Look up full ProfileDocuments for the filtered user IDs
+        List<String> userIds = results.stream().map(AlumniSearchResponse::getUserId).toList();
+        List<ProfileDocument> profiles = profileRepository.findAllByUserIdIn(userIds);
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Filtered Export");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setFontHeightInPoints((short) 11);
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+
+            Row titleRow = sheet.createRow(0);
+            Cell titleCell = titleRow.createCell(0);
+            titleCell.setCellValue("KIT's College of Engineering — Filtered Export (" + profiles.size() + " records)");
+            CellStyle titleStyle = workbook.createCellStyle();
+            Font titleFont = workbook.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 14);
+            titleStyle.setFont(titleFont);
+            titleCell.setCellStyle(titleStyle);
+
+            Row headerRow = sheet.createRow(1);
+            for (int i = 0; i < HEADERS.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(HEADERS[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int rowIdx = 2;
+            int serial = 1;
+            for (ProfileDocument p : profiles) {
+                Row row = sheet.createRow(rowIdx++);
+                int col = 0;
+                row.createCell(col++).setCellValue(serial++);
+                row.createCell(col++).setCellValue(safe(p.getRegistrationNumber()));
+                row.createCell(col++).setCellValue(safe(p.getFullName()));
+                row.createCell(col++).setCellValue(safe(p.getGender()));
+                row.createCell(col++).setCellValue(safe(p.getDateOfBirth()));
+                row.createCell(col++).setCellValue(safe(p.getEmail()));
+                row.createCell(col++).setCellValue(safe(p.getPhone()));
+                String street = "", pinCode = "", city = "", district = "", state = "";
+                if (p.getAddress() != null) {
+                    street = safe(p.getAddress().getStreet());
+                    pinCode = safe(p.getAddress().getPostalCode());
+                    city = safe(p.getAddress().getCity());
+                    state = safe(p.getAddress().getState());
+                    district = city;
+                }
+                row.createCell(col++).setCellValue(street);
+                row.createCell(col++).setCellValue(pinCode);
+                row.createCell(col++).setCellValue(city);
+                row.createCell(col++).setCellValue(district);
+                row.createCell(col++).setCellValue(state);
+                row.createCell(col++).setCellValue(safe(p.getDepartment()));
+                row.createCell(col++).setCellValue(p.getProfileType() != null ? p.getProfileType().name() : "");
+                row.createCell(col++).setCellValue(p.getAdmissionYear() != null ? p.getAdmissionYear() : 0);
+                row.createCell(col++).setCellValue(p.getPassingYear() != null ? p.getPassingYear() : 0);
+                row.createCell(col++).setCellValue(p.getCurrentSemester() != null ? p.getCurrentSemester() : 0);
+                row.createCell(col++).setCellValue(safe(p.getJobTitle()));
+                row.createCell(col++).setCellValue(safe(p.getCompany()));
+                row.createCell(col++).setCellValue(safe(p.getLocation()));
+                String skills = (p.getSkills() != null && !p.getSkills().isEmpty()) ? String.join(", ", p.getSkills()) : "";
+                row.createCell(col++).setCellValue(skills);
+                row.createCell(col++).setCellValue(safe(p.getResumeUrl()));
+                row.createCell(col++).setCellValue(safe(p.getPhotoUrl()));
+                row.createCell(col++).setCellValue(safe(p.getBloodGroup()));
+                String linkedin = "", github = "", instagram = "";
+                if (p.getSocials() != null) {
+                    linkedin = safe(p.getSocials().getLinkedinUrl());
+                    github = safe(p.getSocials().getGithubUrl());
+                    instagram = safe(p.getSocials().getInstagramUrl());
+                }
+                row.createCell(col++).setCellValue(linkedin);
+                row.createCell(col++).setCellValue(github);
+                row.createCell(col++).setCellValue(instagram);
+                row.createCell(col).setCellValue(p.isApproved() ? "Yes" : "No");
+            }
+
+            for (int i = 0; i < HEADERS.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        }
     }
 }

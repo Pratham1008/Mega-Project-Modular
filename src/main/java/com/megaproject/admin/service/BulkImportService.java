@@ -89,18 +89,6 @@ public class BulkImportService {
 
                     email = email.trim().toLowerCase();
 
-                    if (userRepository.existsByEmail(email)) {
-                        result.skipped++;
-                        result.addError(i + 1, "Skipped — email already exists: " + email);
-                        continue;
-                    }
-
-                    if (profileRepository.existsByRegistrationNumber(prn.trim())) {
-                        result.skipped++;
-                        result.addError(i + 1, "Skipped — PRN already exists: " + prn);
-                        continue;
-                    }
-
                     int admissionYear = deriveAdmissionYear(prn);
                     int yearsYearDown = getCellInt(row, COL_YEAR_DOWN);
                     int passingYear   = admissionYear + 4 + yearsYearDown;
@@ -116,6 +104,68 @@ public class BulkImportService {
                     }
 
                     String location        = buildLocation(city, state);
+
+                    // Check if user with this email already exists → update instead of skip
+                    Optional<User> existingUser = userRepository.findByEmail(email);
+                    if (existingUser.isPresent()) {
+                        User user = existingUser.get();
+                        user.setRole(userRole);
+                        userRepository.save(user);
+
+                        Optional<ProfileDocument> existingProfile = profileRepository.findByUserId(user.getId());
+                        if (existingProfile.isPresent()) {
+                            ProfileDocument profile = existingProfile.get();
+                            profile.setFullName(cleanName(fullName));
+                            profile.setPhone(cleanPhone(phone));
+                            profile.setGender(gender != null ? gender.trim() : profile.getGender());
+                            profile.setDateOfBirth(dob != null ? dob : profile.getDateOfBirth());
+                            profile.setDepartment(branch != null && !branch.isBlank() ? branch.trim() : profile.getDepartment());
+                            profile.setRegistrationNumber(prn.trim());
+                            profile.setAdmissionYear(admissionYear);
+                            profile.setPassingYear(passingYear);
+                            profile.setProfileType(profileType);
+                            profile.setLocation(location);
+                            if (address != null || city != null || state != null || pinCode != null) {
+                                profile.setAddress(Address.builder()
+                                        .street(address != null ? address.trim() : (profile.getAddress() != null ? profile.getAddress().getStreet() : null))
+                                        .city(city != null ? city.trim() : (profile.getAddress() != null ? profile.getAddress().getCity() : null))
+                                        .state(state != null ? state.trim() : (profile.getAddress() != null ? profile.getAddress().getState() : null))
+                                        .postalCode(pinCode != null ? pinCode.trim() : (profile.getAddress() != null ? profile.getAddress().getPostalCode() : null))
+                                        .country("India")
+                                        .build());
+                            }
+                            profileRepository.save(profile);
+                            result.updated++;
+                            continue;
+                        }
+                    }
+
+                    // Check if PRN already exists → update profile
+                    Optional<ProfileDocument> existingByPrn = profileRepository.findByRegistrationNumber(prn.trim());
+                    if (existingByPrn.isPresent()) {
+                        ProfileDocument profile = existingByPrn.get();
+                        profile.setFullName(cleanName(fullName));
+                        profile.setPhone(cleanPhone(phone));
+                        profile.setGender(gender != null ? gender.trim() : profile.getGender());
+                        profile.setDateOfBirth(dob != null ? dob : profile.getDateOfBirth());
+                        profile.setDepartment(branch != null && !branch.isBlank() ? branch.trim() : profile.getDepartment());
+                        profile.setAdmissionYear(admissionYear);
+                        profile.setPassingYear(passingYear);
+                        profile.setProfileType(profileType);
+                        profile.setLocation(location);
+                        profileRepository.save(profile);
+
+                        // Also update user role
+                        userRepository.findById(profile.getUserId()).ifPresent(u -> {
+                            u.setRole(userRole);
+                            userRepository.save(u);
+                        });
+
+                        result.updated++;
+                        continue;
+                    }
+
+                    // New user → create
                     String defaultPassword = "KIT@" + prn.trim();
 
                     User user = User.builder()
@@ -251,6 +301,7 @@ public class BulkImportService {
     @Data
     public static class ImportResult {
         private int imported = 0;
+        private int updated  = 0;
         private int skipped  = 0;
         private List<ErrorEntry> errors = new ArrayList<>();
 

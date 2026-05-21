@@ -52,7 +52,8 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
                         }
                 );
 
-                log.debug("WS auth OK userId={}", userId);
+
+
             } catch (JwtException e) {
                 log.warn("WS JWT validation failed: {}", e.getMessage());
                 setAnonymous(attributes);

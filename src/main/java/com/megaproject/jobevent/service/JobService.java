@@ -6,6 +6,7 @@ import com.megaproject.jobevent.exception.ResourceNotFoundException;
 import com.megaproject.jobevent.mapper.JobEventMapper;
 import com.megaproject.jobevent.model.Job;
 import com.megaproject.jobevent.repository.JobRepository;
+import com.megaproject.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -20,12 +22,15 @@ public class JobService {
 
     private final JobRepository jobRepository;
     private final JobEventMapper mapper;
+    private final FcmService fcmService;
 
     public JobResponse create(JobRequest req, String postedByUserId) {
         Job job = mapper.toJob(req);
         job.setActive(true);
         job.setPostedByUserId(postedByUserId);
-        return mapper.toJobResponse(jobRepository.save(job));
+        Job saved = jobRepository.save(job);
+        fcmService.sendToTopic("all", "New Job Posted", req.getTitle() + " at " + req.getCompanyName(), Map.of("type", "JOB", "id", saved.getId()));
+        return mapper.toJobResponse(saved);
     }
 
     public JobResponse getById(String id) {

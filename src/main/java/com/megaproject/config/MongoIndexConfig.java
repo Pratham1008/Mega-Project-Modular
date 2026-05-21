@@ -19,7 +19,7 @@ public class MongoIndexConfig {
 
     @PostConstruct
     public void initIndexes() {
-        log.info("Ensuring TTL indexes are present in MongoDB...");
+
         
         try {
             
@@ -32,7 +32,7 @@ public class MongoIndexConfig {
                     new Index().on("expiryDate", Sort.Direction.ASC).expire(0, TimeUnit.SECONDS)
             );
             
-            log.info("TTL indexes created successfully.");
+
         } catch (Exception e) {
             log.warn("Failed to create TTL indexes. This might happen if an index with the same name already exists but with different options. Error: {}", e.getMessage());
         }

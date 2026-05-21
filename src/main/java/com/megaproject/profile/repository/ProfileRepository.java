@@ -22,6 +22,8 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
 
     boolean existsByRegistrationNumber(String registrationNumber);
 
+    Optional<ProfileDocument> findByRegistrationNumber(String registrationNumber);
+
     boolean existsByEmail(String email);
 
     List<ProfileDocument> findByProfileTypeAndDeletedFalse(ProfileType profileType);
@@ -46,4 +48,6 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
     List<ProfileDocument> searchAlumniByText(String query);
 
     List<ProfileDocument> findByDepartmentAndPassingYearAndDeletedFalse(String department, int passingYear);
+
+    List<ProfileDocument> findAllByUserIdIn(List<String> userIds);
 }

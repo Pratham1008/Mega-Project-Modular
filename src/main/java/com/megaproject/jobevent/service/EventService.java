@@ -6,6 +6,7 @@ import com.megaproject.jobevent.exception.ResourceNotFoundException;
 import com.megaproject.jobevent.mapper.JobEventMapper;
 import com.megaproject.jobevent.model.Event;
 import com.megaproject.jobevent.repository.EventRepository;
+import com.megaproject.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +22,7 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final JobEventMapper mapper;
+    private final FcmService fcmService;
 
     public EventResponse create(EventRequest req, String createdByUserId) {
         Event event = mapper.toEvent(req);
@@ -29,7 +32,9 @@ public class EventService {
         if (event.getTargetAudience() == null || event.getTargetAudience().isBlank()) {
             event.setTargetAudience("ALL");
         }
-        return mapper.toEventResponse(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        fcmService.sendToTopic("all", "New Event", req.getTitle() + " — " + (req.getEventType() != null ? req.getEventType() : "Event"), Map.of("type", "EVENT", "id", saved.getId()));
+        return mapper.toEventResponse(saved);
     }
 
     public EventResponse getById(String id) {

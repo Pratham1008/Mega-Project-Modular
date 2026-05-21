@@ -32,7 +32,6 @@ public class EncryptionUtil {
     @PostConstruct
     public void init() {
         if (encryptionKeyString == null || encryptionKeyString.length() < 32) {
-            log.warn("Chat encryption key is too short. It should be at least 32 characters for AES-256. Padding or truncating to 32 bytes.");
         }
         String padded = String.format("%-32s", encryptionKeyString == null ? "defaultFallback" : encryptionKeyString).replace(' ', '0');
         byte[] keyBytes = padded.substring(0, 32).getBytes(StandardCharsets.UTF_8);

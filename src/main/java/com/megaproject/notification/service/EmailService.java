@@ -35,11 +35,9 @@ public class EmailService {
         if (resendApiKey != null && !resendApiKey.isBlank()) {
             this.resend = new Resend(resendApiKey);
             this.useResend = true;
-            log.info("Email transport: Resend API (SMTP ports blocked workaround)");
         } else {
             this.resend = null;
             this.useResend = false;
-            log.info("Email transport: SMTP (JavaMailSender)");
         }
     }
 
@@ -80,7 +78,6 @@ public class EmailService {
                     .html(htmlBody)
                     .build();
             resend.emails().send(params);
-            log.info("Email sent via Resend → {}", to);
         } catch (ResendException e) {
             log.error("Resend email failed → {} | {}", to, e.getMessage());
         }
