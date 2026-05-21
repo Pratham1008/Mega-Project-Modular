@@ -36,6 +36,13 @@ public class FcmService {
                         .updatedAt(Instant.now())
                         .build())
         );
+        if (firebaseMessaging != null) {
+            try {
+                firebaseMessaging.subscribeToTopicAsync(List.of(token), "all");
+            } catch (Exception e) {
+                log.error("Failed to subscribe token to 'all' topic", e);
+            }
+        }
     }
 
     public void unregisterToken(String token) {

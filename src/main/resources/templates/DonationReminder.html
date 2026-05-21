@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Current Students at KIT</title>
+    <style>
+        body { font-family: 'Inter', -apple-system, sans-serif; background-color: #f3f4f6; color: #1f2937; line-height: 1.6; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
+        .header { background: linear-gradient(135deg, #1d4ed8, #4f46e5); color: #ffffff; padding: 32px 40px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 40px; }
+        .content h2 { color: #111827; font-size: 20px; margin-top: 0; }
+        .benefits { background-color: #f8fafc; border-left: 4px solid #4f46e5; padding: 20px; margin: 24px 0; border-radius: 0 8px 8px 0; }
+        .benefits ul { margin: 0; padding-left: 20px; color: #4b5563; }
+        .benefits li { margin-bottom: 8px; }
+        .benefits li:last-child { margin-bottom: 0; }
+        .cta-container { text-align: center; margin-top: 32px; margin-bottom: 16px; }
+        .btn { display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; transition: background-color 0.2s; }
+        .btn:hover { background-color: #4338ca; }
+        .footer { background-color: #f9fafb; padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Make a Difference Today</h1>
+        </div>
+        <div class="content">
+            <h2 th:text="'Hello ' + ${name} + ','">Hello Alumnus,</h2>
+            <p th:if="${phase == 1}">
+                As a valued member of the KIT Alumni family, you understand the transformative power of education. Today, we're reaching out to ask for your support to help the next generation of students succeed.
+            </p>
+            <p th:if="${phase == 2}">
+                We are following up on our previous request because your support truly makes a difference. If you haven't had the chance to contribute yet, we kindly ask you to consider making a donation to support current KIT students.
+            </p>
+            
+            <div class="benefits">
+                <strong>How your donation helps current students:</strong>
+                <ul>
+                    <li><strong>Scholarships:</strong> Providing financial aid to deserving students who might otherwise be unable to continue their education.</li>
+                    <li><strong>Campus Facilities:</strong> Upgrading labs, libraries, and study spaces to provide a state-of-the-art learning environment.</li>
+                    <li><strong>Student Events:</strong> Sponsoring hackathons, tech fests, and cultural events that foster innovation and holistic development.</li>
+                </ul>
+            </div>
+            
+            <p>Every contribution, no matter the size, directly impacts the lives of students walking the same halls you once did. Together, we can build a stronger, more vibrant KIT community.</p>
+            
+            <div class="cta-container">
+                <a href="https://alumniconnect-lovat.vercel.app/donations" class="btn">Donate Now</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 KIT Alumni Connect. All rights reserved.</p>
+            <p>You received this email because you are a registered alumni on the KIT Alumni Connect platform.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -59,6 +59,15 @@ public class EmailService {
         sendHtmlEmail(toEmail, "Action Required: Verify OTP to Reset Password", "ResetPassword", ctx);
     }
 
+    @Async
+    public void sendDonationReminderEmail(String toEmail, String alumniName, int phase) {
+        Context ctx = new Context();
+        ctx.setVariable("name", alumniName != null ? alumniName : "Alumnus");
+        ctx.setVariable("phase", phase);
+        String subject = phase == 1 ? "Support Current Students at KIT" : "Reminder: We Still Need Your Support at KIT";
+        sendHtmlEmail(toEmail, subject, "DonationReminder", ctx);
+    }
+
     private void sendHtmlEmail(String to, String subject, String template, Context ctx) {
         String htmlBody = templateEngine.process(template, ctx);
 

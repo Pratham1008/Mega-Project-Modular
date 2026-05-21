@@ -28,9 +28,22 @@ public class DonationController {
     private final DonationRepository donationRepo;
     private final ProfileRepository profileRepo;
     private final RazorpayService razorpayService;
+    private final com.megaproject.donation.service.DonationCampaignService campaignService;
 
     @Value("${razorpay.key.id}")
     private String keyId;
+
+    @PostMapping("/campaign/trigger")
+    public ResponseEntity<Map<String, String>> triggerCampaign(
+            @RequestParam(defaultValue = "1") int phase,
+            @AuthenticationPrincipal Jwt jwt) {
+        String role = jwt.getClaimAsString("role");
+        if (!"ADMIN".equals(role)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Only admins can trigger campaigns"));
+        }
+        campaignService.runCampaignForPhase(phase);
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Campaign phase " + phase + " triggered"));
+    }
 
     @PostMapping("/create-order")
     @PreAuthorize("hasRole('ALUMNI')")
