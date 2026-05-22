@@ -3,6 +3,7 @@ package com.megaproject.chat.controller;
 import com.megaproject.chat.model.Connection;
 import com.megaproject.chat.model.Connection.ConnectionStatus;
 import com.megaproject.chat.repository.ConnectionRepository;
+import com.megaproject.notification.service.FcmService;
 import com.megaproject.profile.repository.ProfileRepository;
 import com.megaproject.auth.repository.UserRepository;
 import com.megaproject.auth.model.User;
@@ -24,6 +25,7 @@ public class ConnectionController {
     private final ConnectionRepository connectionRepo;
     private final ProfileRepository profileRepo;
     private final UserRepository userRepo;
+    private final FcmService fcmService;
 
     @PostMapping("/{receiverId}")
     public ResponseEntity<?> sendRequest(
@@ -71,7 +73,14 @@ public class ConnectionController {
                 .status(ConnectionStatus.PENDING)
                 .build();
         updateNames(conn, requesterId, receiverId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(connectionRepo.save(conn));
+        Connection saved = connectionRepo.save(conn);
+        fcmService.sendToUser(
+                receiverId,
+                "New Connection Request",
+                (saved.getRequesterName() != null ? saved.getRequesterName() : "Someone") + " wants to connect with you",
+                Map.of("type", "CONNECTION_REQUEST", "connectionId", saved.getId(), "redirect", "/connections")
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PatchMapping("/{connectionId}/accept")
@@ -146,7 +155,16 @@ public class ConnectionController {
         }
         c.setStatus(newStatus);
         c.setRespondedAt(Instant.now());
-        return ResponseEntity.ok(connectionRepo.save(c));
+        Connection updated = connectionRepo.save(c);
+        if (newStatus == ConnectionStatus.ACCEPTED) {
+            fcmService.sendToUser(
+                    updated.getRequesterId(),
+                    "Connection Accepted",
+                    (updated.getReceiverName() != null ? updated.getReceiverName() : "Someone") + " accepted your connection request",
+                    Map.of("type", "CONNECTION_ACCEPTED", "connectionId", updated.getId(), "redirect", "/connections")
+            );
+        }
+        return ResponseEntity.ok(updated);
     }
 
     private void updateNames(Connection c, String requesterId, String receiverId) {

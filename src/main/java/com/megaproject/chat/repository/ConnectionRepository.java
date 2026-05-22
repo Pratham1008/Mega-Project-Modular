@@ -21,8 +21,10 @@ public interface ConnectionRepository extends MongoRepository<Connection, String
     
     List<Connection> findByReceiverIdAndStatus(String receiverId, ConnectionStatus status);
 
-    
-    List<Connection> findByRequesterIdAndStatus(String requesterId, ConnectionStatus status);
+
+    @Query("{ 'status': 'PENDING' }")
+    List<Connection> findAllPendingConnections();
+
     long countByReceiverIdAndStatus(String receiverId, ConnectionStatus status);
     
     @Query("{ $or: [ { 'requesterId': ?0 }, { 'receiverId': ?0 } ], 'status': 'ACCEPTED' }")

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Pending Connection Requests</title>
+    <style>
+        body { margin: 0; padding: 0; background: #f4f6f8; font-family: 'Segoe UI', Arial, sans-serif; }
+        .wrapper { max-width: 560px; margin: 32px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .header { background: linear-gradient(135deg, #1a56db 0%, #4f46e5 100%); padding: 32px 32px 24px; text-align: center; }
+        .header img { width: 48px; height: 48px; border-radius: 12px; margin-bottom: 12px; }
+        .header h1 { margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; }
+        .header p { margin: 6px 0 0; color: rgba(255,255,255,0.82); font-size: 13px; }
+        .body { padding: 28px 32px; }
+        .greeting { font-size: 16px; color: #1e293b; margin-bottom: 6px; font-weight: 600; }
+        .subtitle { font-size: 14px; color: #64748b; margin-bottom: 20px; }
+        .badge { display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 99px; padding: 6px 16px; font-size: 14px; font-weight: 700; color: #1d4ed8; margin-bottom: 20px; }
+        .requester-list { margin: 0; padding: 0; list-style: none; }
+        .requester-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        .requester-item:last-child { border-bottom: none; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #e0e7ff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #4f46e5; }
+        .requester-name { font-size: 14px; font-weight: 600; color: #1e293b; }
+        .requester-sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        .cta { text-align: center; margin: 28px 0 8px; }
+        .cta a { display: inline-block; background: #1a56db; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 13px 32px; border-radius: 99px; }
+        .footer { padding: 18px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="header">
+        <h1>KIT AlumniConnect</h1>
+        <p>Your weekly connection summary</p>
+    </div>
+    <div class="body">
+        <p class="greeting">Hi <span th:text="${name}">Member</span>,</p>
+        <p class="subtitle">You have connection requests waiting for your response. Don't leave them hanging!</p>
+
+        <div class="badge">
+            &#128279;&nbsp;
+            <span th:text="${count + ' pending connection request' + (count > 1 ? 's' : '')}">2 pending connection requests</span>
+        </div>
+
+        <ul class="requester-list">
+            <li class="requester-item" th:each="r : ${requesters}">
+                <img th:if="${r.photoUrl != null and !r.photoUrl.isEmpty()}"
+                     th:src="${r.photoUrl}" class="avatar" alt="photo" />
+                <div th:unless="${r.photoUrl != null and !r.photoUrl.isEmpty()}"
+                     class="avatar"
+                     th:text="${#strings.substring(r.name, 0, 1).toUpperCase()}">A</div>
+                <div>
+                    <div class="requester-name" th:text="${r.name}">Requester Name</div>
+                    <div class="requester-sub">wants to connect with you</div>
+                </div>
+            </li>
+        </ul>
+
+        <div class="cta">
+            <a href="https://alumni.prathameshcorporations.site/connections">Review &amp; Respond</a>
+        </div>
+    </div>
+    <div class="footer">
+        &copy; KIT's College of Engineering, Kolhapur &mdash; AlumniConnect Portal<br/>
+        You're receiving this because you have pending connection requests. <br/>
+        Emails are sent once a week only if you have unanswered requests.
+    </div>
+</div>
+</body>
+</html>

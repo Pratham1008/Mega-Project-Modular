@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.util.List;
+import java.util.Map;
+
 @Service
 @Slf4j
 public class EmailService {
@@ -66,6 +69,18 @@ public class EmailService {
         ctx.setVariable("phase", phase);
         String subject = phase == 1 ? "Support Current Students at KIT" : "Reminder: We Still Need Your Support at KIT";
         sendHtmlEmail(toEmail, subject, "DonationReminder", ctx);
+    }
+
+    @Async
+    public void sendConnectionReminderEmail(String toEmail, String name, int count, List<Map<String, String>> requesters) {
+        Context ctx = new Context();
+        ctx.setVariable("name", name != null ? name : "Member");
+        ctx.setVariable("count", count);
+        ctx.setVariable("requesters", requesters);
+        String subject = count == 1
+                ? "You have 1 pending connection request on KIT AlumniConnect"
+                : "You have " + count + " pending connection requests on KIT AlumniConnect";
+        sendHtmlEmail(toEmail, subject, "ConnectionReminder", ctx);
     }
 
     private void sendHtmlEmail(String to, String subject, String template, Context ctx) {
