@@ -74,13 +74,16 @@ public class ChatService {
         mongoTemplate.updateMulti(query, new Update().set("read", true), ChatMessage.class);
     }
 
-    // OPTIMIZED: single aggregation instead of fetching all conversations first
     public Map<String, Long> getUnreadCounts(String userId) {
+        List<String> convIds = conversationRepo
+                .findByParticipantIdsContainingOrderByLastMessageAtDesc(userId)
+                .stream().map(Conversation::getId).toList();
+        if (convIds.isEmpty()) return Collections.emptyMap();
+
         Aggregation agg = Aggregation.newAggregation(
-                Aggregation.lookup("conversations", "conversationId", "_id", "conv"),
-                Aggregation.match(Criteria.where("read").is(false)
-                        .and("senderId").ne(userId)
-                        .and("conv.participantIds").is(userId)),
+                Aggregation.match(Criteria.where("conversationId").in(convIds)
+                        .and("read").is(false)
+                        .and("senderId").ne(userId)),
                 Aggregation.group("conversationId").count().as("unreadCount")
         );
         AggregationResults<Map> results = mongoTemplate.aggregate(agg, "chat_messages", Map.class);
