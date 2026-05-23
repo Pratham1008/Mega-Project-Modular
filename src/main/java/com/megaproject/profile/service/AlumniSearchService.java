@@ -9,10 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.TextCriteria;
-import org.springframework.data.mongodb.core.query.TextQuery;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,17 +24,13 @@ public class AlumniSearchService {
 
     public List<AlumniSearchResponse> search(String query) {
         return profileRepository.searchAlumniByText(query)
-                .stream()
-                .map(profileMapper::toAlumniSearchResponse)
-                .toList();
+                .stream().map(profileMapper::toAlumniSearchResponse).toList();
     }
 
     public List<AlumniSearchResponse> searchWithFilters(
             String query, String department, String company, Integer passingYear, String location) {
 
-        Query mongoQuery = new Query();
-        List<Criteria> criteriaList = new java.util.ArrayList<>();
-
+        List<Criteria> criteriaList = new ArrayList<>();
         criteriaList.add(Criteria.where("profileType").in(ProfileType.ALUMNI, ProfileType.STUDENT));
         criteriaList.add(Criteria.where("deleted").is(false));
         criteriaList.add(Criteria.where("approved").is(true));
@@ -46,28 +41,25 @@ public class AlumniSearchService {
                     Criteria.where("company").regex(query, "i"),
                     Criteria.where("jobTitle").regex(query, "i"),
                     Criteria.where("department").regex(query, "i"),
-                    Criteria.where("skills").regex(query, "i")
-            ));
+                    Criteria.where("skills").regex(query, "i")));
         }
-
-        if (department != null && !department.isBlank()) {
+        if (department != null && !department.isBlank())
             criteriaList.add(Criteria.where("department").regex(department, "i"));
-        }
-        if (company != null && !company.isBlank()) {
+        if (company != null && !company.isBlank())
             criteriaList.add(Criteria.where("company").regex(company, "i"));
-        }
-        if (passingYear != null) {
+        if (passingYear != null)
             criteriaList.add(Criteria.where("passingYear").is(passingYear));
-        }
-        if (location != null && !location.isBlank()) {
+        if (location != null && !location.isBlank())
             criteriaList.add(Criteria.where("location").regex(location, "i"));
-        }
 
-        Criteria finalCriteria = new Criteria().andOperator(criteriaList.toArray(new Criteria[0]));
-        mongoQuery.addCriteria(finalCriteria);
+        Query mongoQuery = new Query(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
         mongoQuery.limit(100);
 
-        List<ProfileDocument> results = mongoTemplate.find(mongoQuery, ProfileDocument.class);
-        return results.stream().map(profileMapper::toAlumniSearchResponse).toList();
+        mongoQuery.fields()
+                .include("userId", "fullName", "photoUrl", "department", "passingYear",
+                        "profileType", "company", "jobTitle", "location", "skills", "socials");
+
+        return mongoTemplate.find(mongoQuery, ProfileDocument.class)
+                .stream().map(profileMapper::toAlumniSearchResponse).toList();
     }
 }

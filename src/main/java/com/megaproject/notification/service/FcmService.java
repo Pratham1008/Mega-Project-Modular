@@ -9,8 +9,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,13 +29,9 @@ public class FcmService {
                     tokenRepo.save(existing);
                 },
                 () -> tokenRepo.save(FcmToken.builder()
-                        .userId(userId)
-                        .token(token)
-                        .platform(platform)
-                        .createdAt(Instant.now())
-                        .updatedAt(Instant.now())
-                        .build())
-        );
+                        .userId(userId).token(token).platform(platform)
+                        .createdAt(Instant.now()).updatedAt(Instant.now()).build()));
+
         if (firebaseMessaging != null) {
             try {
                 firebaseMessaging.subscribeToTopicAsync(List.of(token), "all");
@@ -49,24 +45,42 @@ public class FcmService {
         tokenRepo.deleteByToken(token);
     }
 
+    // OPTIMIZED: MulticastMessage sends to up to 500 tokens in one FCM call
     @Async
     public void sendToUser(String userId, String title, String body, Map<String, String> data) {
         if (firebaseMessaging == null) return;
         List<FcmToken> tokens = tokenRepo.findByUserId(userId);
-        for (FcmToken t : tokens) {
+        if (tokens.isEmpty()) return;
+
+        List<String> tokenStrings = tokens.stream().map(FcmToken::getToken).toList();
+        // FCM supports up to 500 tokens per multicast
+        for (int i = 0; i < tokenStrings.size(); i += 500) {
+            List<String> batch = tokenStrings.subList(i, Math.min(i + 500, tokenStrings.size()));
             try {
-                Message message = Message.builder()
-                        .setToken(t.getToken())
+                MulticastMessage message = MulticastMessage.builder()
+                        .addAllTokens(batch)
                         .setNotification(Notification.builder().setTitle(title).setBody(body).build())
                         .putAllData(data != null ? data : Map.of())
                         .build();
-                firebaseMessaging.send(message);
-            } catch (FirebaseMessagingException e) {
-                if (e.getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED) {
-                    tokenRepo.delete(t);
-                } else {
-                    log.error("FCM send failed for user {}: {}", userId, e.getMessage());
+                BatchResponse response = firebaseMessaging.sendEachForMulticast(message);
+
+                // Clean up invalid tokens
+                if (response.getFailureCount() > 0) {
+                    List<SendResponse> responses = response.getResponses();
+                    List<String> toDelete = new ArrayList<>();
+                    for (int j = 0; j < responses.size(); j++) {
+                        SendResponse sr = responses.get(j);
+                        if (!sr.isSuccessful()) {
+                            FirebaseMessagingException ex = sr.getException();
+                            if (ex != null && ex.getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED) {
+                                toDelete.add(batch.get(j));
+                            }
+                        }
+                    }
+                    if (!toDelete.isEmpty()) tokenRepo.deleteAllByTokenIn(toDelete);
                 }
+            } catch (FirebaseMessagingException e) {
+                log.error("FCM multicast failed for user {}: {}", userId, e.getMessage());
             }
         }
     }

@@ -1,23 +1,27 @@
 package com.megaproject.profile.service;
 
-import com.megaproject.auth.service.AuthService;
 import com.megaproject.auth.model.Role;
+import com.megaproject.auth.repository.UserRepository;
+import com.megaproject.auth.service.AuthService;
 import com.megaproject.profile.dto.request.*;
 import com.megaproject.profile.dto.response.*;
 import com.megaproject.profile.exception.*;
 import com.megaproject.profile.mapper.ProfileMapper;
 import com.megaproject.profile.model.*;
 import com.megaproject.profile.repository.ProfileRepository;
-import com.megaproject.auth.repository.UserRepository;
-import com.megaproject.auth.model.User;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.Year;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -30,6 +34,7 @@ public class ProfileService {
     private final AuthService authService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MongoTemplate mongoTemplate;
 
     public EducationalProfileResponse createEducationalProfile(EducationalProfileRequest req) {
         if (profileRepository.existsByUserId(req.getUserId()))
@@ -41,11 +46,8 @@ public class ProfileService {
         doc.setProfileType(determineType(req.getPassingYear()));
         ProfileDocument saved = profileRepository.save(doc);
 
-        if (saved.getProfileType() == ProfileType.ALUMNI) {
-            authService.updateUserRole(saved.getUserId(), Role.ALUMNI);
-        } else {
-            authService.updateUserRole(saved.getUserId(), Role.STUDENT);
-        }
+        Role role = saved.getProfileType() == ProfileType.ALUMNI ? Role.ALUMNI : Role.STUDENT;
+        authService.updateUserRole(saved.getUserId(), role);
 
         return profileMapper.toEducationalResponse(saved);
     }
@@ -57,27 +59,23 @@ public class ProfileService {
         doc.setProfileType(determineType(req.getPassingYear()));
         ProfileDocument saved = profileRepository.save(doc);
 
-        if (saved.getProfileType() == ProfileType.ALUMNI) {
-            authService.updateUserRole(userId, Role.ALUMNI);
-        } else {
-            authService.updateUserRole(userId, Role.STUDENT);
-        }
+        Role role = saved.getProfileType() == ProfileType.ALUMNI ? Role.ALUMNI : Role.STUDENT;
+        authService.updateUserRole(userId, role);
 
         return profileMapper.toEducationalResponse(saved);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public FacultyProfileResponse createFacultyProfile(FacultyProfileRequest req) {
-        if (profileRepository.existsByEmail(req.getEmail()))
-            throw new ProfileAlreadyExistsException("Profile already exists for email: " + req.getEmail());
-
         String email = req.getEmail().trim().toLowerCase();
-        User user = userRepository.findByEmail(email).orElseGet(() -> {
+        if (profileRepository.existsByEmail(email))
+            throw new ProfileAlreadyExistsException("Profile already exists for email: " + email);
+
+        var user = userRepository.findByEmail(email).orElseGet(() -> {
             String prefix = email.split("@")[0];
-            String defaultPassword = "KIT@" + prefix;
-            User newUser = User.builder()
+            var newUser = com.megaproject.auth.model.User.builder()
                     .email(email)
-                    .password(passwordEncoder.encode(defaultPassword))
+                    .password(passwordEncoder.encode("KIT@" + prefix))
                     .role(Role.FACULTY)
                     .verified(true)
                     .build();
@@ -90,11 +88,10 @@ public class ProfileService {
         doc.setProfileType(ProfileType.FACULTY);
         doc.setApproved(true);
         ProfileDocument saved = profileRepository.save(doc);
-        
+
         if (user.getRole() != Role.FACULTY) {
             authService.updateUserRole(saved.getUserId(), Role.FACULTY);
         }
-
         return profileMapper.toFacultyResponse(saved);
     }
 
@@ -115,19 +112,14 @@ public class ProfileService {
 
     public List<ProfileSummaryResponse> getProfilesByType(ProfileType type) {
         return profileRepository.findByProfileTypeAndDeletedFalse(type)
-                .stream()
-                .map(profileMapper::toSummary)
-                .toList();
+                .stream().map(profileMapper::toSummary).toList();
     }
 
     public List<ProfileSummaryResponse> getAllProfiles() {
         return profileRepository.findByDeletedFalse()
-                .stream()
-                .map(profileMapper::toSummary)
-                .toList();
+                .stream().map(profileMapper::toSummary).toList();
     }
 
-    
     public Page<ProfileSummaryResponse> getProfilesByTypePaged(ProfileType type, Pageable pageable) {
         return profileRepository.findByProfileTypeAndDeletedFalseAndApprovedTrue(type, pageable)
                 .map(profileMapper::toSummary);
@@ -140,22 +132,28 @@ public class ProfileService {
 
     public List<ProfileSummaryResponse> getBatchMates(String department, int passingYear) {
         return profileRepository.findByDepartmentAndPassingYearAndDeletedFalse(department, passingYear)
-                .stream()
-                .filter(ProfileDocument::isApproved)
-                .map(profileMapper::toSummary)
-                .toList();
+                .stream().filter(ProfileDocument::isApproved).map(profileMapper::toSummary).toList();
     }
 
+    // OPTIMIZED: single aggregation instead of 3 separate count queries
+    @Cacheable(value = "profileCounts", unless = "#result == null")
     public Map<String, Long> getProfileCounts() {
-        long alumni = profileRepository.countByProfileTypeAndDeletedFalseAndApprovedTrue(ProfileType.ALUMNI);
-        long student = profileRepository.countByProfileTypeAndDeletedFalseAndApprovedTrue(ProfileType.STUDENT);
-        long faculty = profileRepository.countByProfileTypeAndDeletedFalseAndApprovedTrue(ProfileType.FACULTY);
-        return Map.of(
-                "alumni", alumni,
-                "student", student,
-                "faculty", faculty,
-                "total", alumni + student + faculty
+        Aggregation agg = Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("deleted").is(false).and("approved").is(true)),
+                Aggregation.group("profileType").count().as("count")
         );
+        AggregationResults<Map> results = mongoTemplate.aggregate(agg, "profiles", Map.class);
+
+        long alumni = 0, student = 0, faculty = 0;
+        for (Map r : results.getMappedResults()) {
+            String type = (String) r.get("_id");
+            long count = ((Number) r.get("count")).longValue();
+            if ("ALUMNI".equals(type)) alumni = count;
+            else if ("STUDENT".equals(type)) student = count;
+            else if ("FACULTY".equals(type)) faculty = count;
+        }
+        long total = alumni + student + faculty;
+        return Map.of("alumni", alumni, "student", student, "faculty", faculty, "total", total);
     }
 
     @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.subject")
@@ -171,14 +169,12 @@ public class ProfileService {
         doc.setProfileType(newType);
         ProfileDocument saved = profileRepository.save(doc);
 
-        if (newType == ProfileType.ALUMNI) {
-            authService.updateUserRole(userId, Role.ALUMNI);
-        } else if (newType == ProfileType.STUDENT) {
-            authService.updateUserRole(userId, Role.STUDENT);
-        } else if (newType == ProfileType.FACULTY) {
-            authService.updateUserRole(userId, Role.FACULTY);
-        }
-
+        Role role = switch (newType) {
+            case ALUMNI -> Role.ALUMNI;
+            case STUDENT -> Role.STUDENT;
+            case FACULTY -> Role.FACULTY;
+        };
+        authService.updateUserRole(userId, role);
         return profileMapper.toEducationalResponse(saved);
     }
 
@@ -196,12 +192,9 @@ public class ProfileService {
     }
 
     private ProfileType determineType(int passingYear) {
-        int currentYear = java.time.Year.now().getValue();
-        int currentMonth = java.time.LocalDate.now().getMonthValue();
-        
-        if (passingYear < currentYear || (passingYear == currentYear && currentMonth >= 8)) {
+        LocalDate now = LocalDate.now();
+        if (passingYear < now.getYear() || (passingYear == now.getYear() && now.getMonthValue() >= 8))
             return ProfileType.ALUMNI;
-        }
         return ProfileType.STUDENT;
     }
 }
