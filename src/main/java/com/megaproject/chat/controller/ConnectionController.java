@@ -2,179 +2,81 @@ package com.megaproject.chat.controller;
 
 import com.megaproject.chat.model.Connection;
 import com.megaproject.chat.model.Connection.ConnectionStatus;
-import com.megaproject.chat.repository.ConnectionRepository;
-import com.megaproject.notification.service.FcmService;
-import com.megaproject.profile.repository.ProfileRepository;
-import com.megaproject.auth.repository.UserRepository;
-import com.megaproject.auth.model.User;
-import com.megaproject.auth.model.Role;
+import com.megaproject.chat.service.ConnectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/connections")
 @RequiredArgsConstructor
 public class ConnectionController {
 
-    private final ConnectionRepository connectionRepo;
-    private final ProfileRepository profileRepo;
-    private final UserRepository userRepo;
-    private final FcmService fcmService;
+    private final ConnectionService connectionService;
 
     @PostMapping("/{receiverId}")
     public ResponseEntity<?> sendRequest(
             @PathVariable String receiverId,
             @AuthenticationPrincipal Jwt jwt) {
-
         String requesterId = jwt.getSubject();
         String requesterRole = jwt.getClaimAsString("role");
-
-        if ("ADMIN".equals(requesterRole)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Admin cannot use connections"));
-        }
-
-        if (requesterId.equals(receiverId)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Cannot connect with yourself"));
-        }
-
-        Optional<User> receiver = userRepo.findById(receiverId);
-        if (receiver.isPresent() && receiver.get().getRole() == Role.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Cannot connect with an Admin"));
-        }
-
-        Optional<Connection> existing = connectionRepo.findByUsers(requesterId, receiverId);
-        if (existing.isPresent()) {
-            Connection c = existing.get();
-            if (c.getStatus() == ConnectionStatus.ACCEPTED) {
-                return ResponseEntity.ok(Map.of("message", "Already connected", "connection", c));
-            }
-            if (c.getStatus() == ConnectionStatus.PENDING) {
-                return ResponseEntity.ok(Map.of("message", "Request already pending", "connection", c));
-            }
-            c.setStatus(ConnectionStatus.PENDING);
-            c.setRequesterId(requesterId);
-            c.setReceiverId(receiverId);
-            c.setRespondedAt(null);
-            updateNames(c, requesterId, receiverId);
-            return ResponseEntity.ok(connectionRepo.save(c));
-        }
-
-        Connection conn = Connection.builder()
-                .requesterId(requesterId)
-                .receiverId(receiverId)
-                .status(ConnectionStatus.PENDING)
-                .build();
-        updateNames(conn, requesterId, receiverId);
-        Connection saved = connectionRepo.save(conn);
-        fcmService.sendToUser(
-                receiverId,
-                "New Connection Request",
-                (saved.getRequesterName() != null ? saved.getRequesterName() : "Someone") + " wants to connect with you",
-                Map.of("type", "CONNECTION_REQUEST", "connectionId", saved.getId(), "redirect", "/connections")
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        
+        Connection connection = connectionService.sendRequest(requesterId, requesterRole, receiverId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(connection);
     }
 
     @PatchMapping("/{connectionId}/accept")
     public ResponseEntity<?> accept(
             @PathVariable String connectionId,
             @AuthenticationPrincipal Jwt jwt) {
-        return respondToRequest(connectionId, jwt.getSubject(), ConnectionStatus.ACCEPTED);
+        Connection connection = connectionService.respondToRequest(connectionId, jwt.getSubject(), ConnectionStatus.ACCEPTED);
+        return ResponseEntity.ok(connection);
     }
 
     @PatchMapping("/{connectionId}/reject")
     public ResponseEntity<?> reject(
             @PathVariable String connectionId,
             @AuthenticationPrincipal Jwt jwt) {
-        return respondToRequest(connectionId, jwt.getSubject(), ConnectionStatus.REJECTED);
+        Connection connection = connectionService.respondToRequest(connectionId, jwt.getSubject(), ConnectionStatus.REJECTED);
+        return ResponseEntity.ok(connection);
     }
 
     @GetMapping("/status/{otherUserId}")
     public ResponseEntity<Map<String, Object>> status(
             @PathVariable String otherUserId,
             @AuthenticationPrincipal Jwt jwt) {
-        Optional<Connection> conn = connectionRepo.findByUsers(jwt.getSubject(), otherUserId);
-        if (conn.isEmpty()) {
-            return ResponseEntity.ok(Map.of("status", "NONE"));
-        }
-        Connection c = conn.get();
-        Map<String, Object> result = new HashMap<>();
-        result.put("status", c.getStatus().name());
-        result.put("connectionId", c.getId());
-        result.put("requesterId", c.getRequesterId());
-        result.put("receiverId", c.getReceiverId());
-        return ResponseEntity.ok(result);
+        Map<String, Object> status = connectionService.getConnectionStatus(jwt.getSubject(), otherUserId);
+        return ResponseEntity.ok(status);
     }
 
     @GetMapping("/pending")
     public ResponseEntity<List<Connection>> pendingRequests(@AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(
-                connectionRepo.findByReceiverIdAndStatus(jwt.getSubject(), ConnectionStatus.PENDING));
+        List<Connection> pending = connectionService.getPendingRequests(jwt.getSubject());
+        return ResponseEntity.ok(pending);
     }
 
     @GetMapping("/pending/count")
     public ResponseEntity<Map<String, Long>> pendingCount(@AuthenticationPrincipal Jwt jwt) {
-        long count = connectionRepo.countByReceiverIdAndStatus(jwt.getSubject(), ConnectionStatus.PENDING);
+        long count = connectionService.getPendingCount(jwt.getSubject());
         return ResponseEntity.ok(Map.of("count", count));
     }
 
     @GetMapping("/accepted")
     public ResponseEntity<List<Connection>> myConnections(@AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(connectionRepo.findAllAcceptedForUser(jwt.getSubject()));
+        List<Connection> accepted = connectionService.getAcceptedConnections(jwt.getSubject());
+        return ResponseEntity.ok(accepted);
     }
 
     @GetMapping("/check/{otherUserId}")
     public ResponseEntity<Map<String, Boolean>> isConnected(
             @PathVariable String otherUserId,
             @AuthenticationPrincipal Jwt jwt) {
-        boolean connected = connectionRepo.findAcceptedConnection(jwt.getSubject(), otherUserId).isPresent();
+        boolean connected = connectionService.isConnected(jwt.getSubject(), otherUserId);
         return ResponseEntity.ok(Map.of("connected", connected));
-    }
-
-    private ResponseEntity<?> respondToRequest(String connectionId, String userId, ConnectionStatus newStatus) {
-        Optional<Connection> opt = connectionRepo.findById(connectionId);
-        if (opt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        Connection c = opt.get();
-        if (!c.getReceiverId().equals(userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Only the receiver can respond to this request"));
-        }
-        if (c.getStatus() != ConnectionStatus.PENDING) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Request already " + c.getStatus().name().toLowerCase()));
-        }
-        c.setStatus(newStatus);
-        c.setRespondedAt(Instant.now());
-        Connection updated = connectionRepo.save(c);
-        if (newStatus == ConnectionStatus.ACCEPTED) {
-            fcmService.sendToUser(
-                    updated.getRequesterId(),
-                    "Connection Accepted",
-                    (updated.getReceiverName() != null ? updated.getReceiverName() : "Someone") + " accepted your connection request",
-                    Map.of("type", "CONNECTION_ACCEPTED", "connectionId", updated.getId(), "redirect", "/connections")
-            );
-        }
-        return ResponseEntity.ok(updated);
-    }
-
-    private void updateNames(Connection c, String requesterId, String receiverId) {
-        profileRepo.findByUserId(requesterId).ifPresent(p -> {
-            c.setRequesterName(p.getFullName());
-            c.setRequesterPhotoUrl(p.getPhotoUrl());
-        });
-        profileRepo.findByUserId(receiverId).ifPresent(p -> {
-            c.setReceiverName(p.getFullName());
-            c.setReceiverPhotoUrl(p.getPhotoUrl());
-        });
     }
 }

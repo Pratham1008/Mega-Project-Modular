@@ -2,7 +2,7 @@ package com.megaproject.jobevent.service;
 
 import com.megaproject.jobevent.dto.request.JobRequest;
 import com.megaproject.jobevent.dto.response.JobResponse;
-import com.megaproject.jobevent.exception.ResourceNotFoundException;
+import com.megaproject.common.exception.ResourceNotFoundException;
 import com.megaproject.jobevent.mapper.JobEventMapper;
 import com.megaproject.jobevent.model.Job;
 import com.megaproject.jobevent.repository.JobRepository;

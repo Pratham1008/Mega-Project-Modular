@@ -20,9 +20,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/donations")
 @RequiredArgsConstructor
+@Slf4j
 public class DonationController {
 
     private final DonationRepository donationRepo;
@@ -49,7 +52,7 @@ public class DonationController {
     @PreAuthorize("hasRole('ALUMNI')")
     public ResponseEntity<?> createOrder(@Valid @RequestBody DonationRequest req) {
         try {
-            Order order = razorpayService.createOrder(req.getAmount());
+            Order order = razorpayService.createOrder(Math.round(req.getAmount() * 100));
             OrderResponse response = OrderResponse.builder()
                     .orderId(order.get("id"))
                     .amount(req.getAmount())
@@ -58,7 +61,7 @@ public class DonationController {
                     .build();
             return ResponseEntity.ok(response);
         } catch (RazorpayException e) {
-            e.printStackTrace();
+            log.error("Failed to create Razorpay order", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to create Razorpay order"));
         }

@@ -40,6 +40,9 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
     @Query("{ 'profileType': ?0, 'deleted': false, 'location': { $exists: true, $nin: ['', null] } }")
     List<ProfileDocument> findProfilesWithLocation(ProfileType type);
 
+    @Query("{ 'profileType': ?0, 'deleted': false, 'approved': true, 'location': { $exists: true, $nin: ['', null] } }")
+    Page<ProfileDocument> findProfilesWithLocationPaged(ProfileType type, Pageable pageable);
+
     List<ProfileDocument> findByDeletedFalse();
 
     long countByProfileTypeAndDeletedFalseAndApprovedTrue(ProfileType profileType);
@@ -48,6 +51,8 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
     List<ProfileDocument> searchAlumniByText(String query);
 
     List<ProfileDocument> findByDepartmentAndPassingYearAndDeletedFalse(String department, int passingYear);
+
+    Page<ProfileDocument> findByDepartmentAndPassingYearAndDeletedFalseAndApprovedTrue(String department, int passingYear, Pageable pageable);
 
     List<ProfileDocument> findAllByUserIdIn(List<String> userIds);
 }

@@ -3,7 +3,7 @@ package com.megaproject.auth.service;
 import com.megaproject.auth.dto.*;
 import com.megaproject.auth.exception.AuthException;
 import com.megaproject.auth.exception.EmailAlreadyInUseException;
-import com.megaproject.auth.exception.ResourceNotFoundException;
+import com.megaproject.common.exception.ResourceNotFoundException;
 import com.megaproject.auth.model.*;
 import com.megaproject.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

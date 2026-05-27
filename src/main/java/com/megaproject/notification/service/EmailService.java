@@ -63,6 +63,15 @@ public class EmailService {
     }
 
     @Async
+    public void sendCredentialsEmail(String toEmail, String name, String password) {
+        Context ctx = new Context();
+        ctx.setVariable("name", name != null ? name : "Member");
+        ctx.setVariable("userEmail", toEmail);
+        ctx.setVariable("password", password);
+        sendHtmlEmail(toEmail, "Welcome to KIT AlumniConnect — Your Account Credentials", "CredentialsEmail", ctx);
+    }
+
+    @Async
     public void sendDonationReminderEmail(String toEmail, String alumniName, int phase) {
         Context ctx = new Context();
         ctx.setVariable("name", alumniName != null ? alumniName : "Alumnus");

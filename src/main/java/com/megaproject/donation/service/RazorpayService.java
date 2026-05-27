@@ -8,8 +8,10 @@ import jakarta.annotation.PostConstruct;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class RazorpayService {
 
     @Value("${razorpay.key.id}")
@@ -27,13 +29,14 @@ public class RazorpayService {
     }
 
     
-    public Order createOrder(double amountInRupees) throws RazorpayException {
+    public Order createOrder(long amountInPaise) throws RazorpayException {
+        if (amountInPaise <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
         JSONObject orderRequest = new JSONObject();
-        
-        orderRequest.put("amount", (int) (amountInRupees * 100));
+        orderRequest.put("amount", amountInPaise);
         orderRequest.put("currency", "INR");
         orderRequest.put("receipt", "txn_" + System.currentTimeMillis());
-
         return razorpayClient.orders.create(orderRequest);
     }
 
@@ -47,7 +50,7 @@ public class RazorpayService {
 
             return Utils.verifyPaymentSignature(options, keySecret);
         } catch (RazorpayException e) {
-            e.printStackTrace();
+            log.error("Payment signature verification failed", e);
             return false;
         }
     }

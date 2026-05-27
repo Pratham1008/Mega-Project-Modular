@@ -37,8 +37,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private void periodicCleanup() {
         long now = System.currentTimeMillis();
-        if (now - lastCleanup.get() < CLEANUP_INTERVAL_MS) return;
-        if (!lastCleanup.compareAndSet(lastCleanup.get(), now)) return; // only one thread cleans
+        long last = lastCleanup.get();
+        if (now - last < CLEANUP_INTERVAL_MS) return;
+        if (!lastCleanup.compareAndSet(last, now)) return; // only one thread cleans
         // Remove buckets not accessed in last 10 minutes
         buckets.entrySet().removeIf(e -> e.getValue().isStale(now, 10 * 60 * 1000L));
     }

@@ -60,7 +60,7 @@ public class BulkImportController {
             @RequestParam(required = false) Integer passingYear,
             @RequestParam(required = false) String location) {
         try {
-            var results = alumniSearchService.searchWithFilters(q, department, company, passingYear, location);
+            var results = alumniSearchService.searchWithFilters(q, department, company, passingYear, location, 0, Integer.MAX_VALUE).getContent();
             byte[] data = exportService.exportFilteredToExcel(results);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(
@@ -73,5 +73,4 @@ public class BulkImportController {
             return ResponseEntity.internalServerError().build();
         }
     }
-
 }

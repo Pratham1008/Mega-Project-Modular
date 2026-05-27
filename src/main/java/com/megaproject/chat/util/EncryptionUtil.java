@@ -23,7 +23,7 @@ public class EncryptionUtil {
     private static final int IV_LENGTH_BYTE = 12;
     private static final String PREFIX = "[ENC]";
 
-    @Value("${app.security.chat.encryption-key:defaultFallbackKeyThatShouldBeChangedInProd!!1234}")
+    @Value("${app.security.chat.encryption-key:}")
     private String encryptionKeyString;
 
     private SecretKey secretKey;
@@ -31,9 +31,19 @@ public class EncryptionUtil {
 
     @PostConstruct
     public void init() {
-        String padded = String.format("%-32s", encryptionKeyString == null ? "defaultFallback" : encryptionKeyString).replace(' ', '0');
-        byte[] keyBytes = padded.substring(0, 32).getBytes(StandardCharsets.UTF_8);
-        this.secretKey = new SecretKeySpec(keyBytes, "AES");
+        if (encryptionKeyString == null || encryptionKeyString.isBlank()) {
+            throw new IllegalStateException("app.security.chat.encryption-key is required and must be configured in application.properties / environment variables!");
+        }
+        try {
+            byte[] keyBytes = Base64.getDecoder().decode(encryptionKeyString.trim());
+            if (keyBytes.length != 16 && keyBytes.length != 24 && keyBytes.length != 32) {
+                throw new IllegalArgumentException("AES encryption key size must be 16, 24, or 32 bytes! Actual size: " + keyBytes.length);
+            }
+            this.secretKey = new SecretKeySpec(keyBytes, "AES");
+            log.info("🔐 Chat encryption utility initialized successfully with a {}-bit key.", keyBytes.length * 8);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Failed to Base64-decode chat encryption key: " + e.getMessage(), e);
+        }
     }
 
     public String encrypt(String plainText) {

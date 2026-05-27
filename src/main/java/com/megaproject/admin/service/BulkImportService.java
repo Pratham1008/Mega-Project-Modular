@@ -19,6 +19,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.megaproject.notification.service.EmailService;
+import java.security.SecureRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,18 @@ public class BulkImportService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+        StringBuilder sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) {
+            sb.append(chars.charAt(secureRandom.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
 
     private static final int COL_SR_NO     = 0;
     private static final int COL_PRN       = 1;
@@ -166,15 +180,18 @@ public class BulkImportService {
                     }
 
                     // New user → create
-                    String defaultPassword = "KIT@" + prn.trim();
+                    String generatedPassword = generateRandomPassword();
 
                     User user = User.builder()
                             .email(email)
-                            .password(passwordEncoder.encode(defaultPassword))
+                            .password(passwordEncoder.encode(generatedPassword))
                             .role(userRole)
                             .verified(true)
                             .build();
                     User savedUser = userRepository.save(user);
+
+                    emailService.sendCredentialsEmail(email, cleanName(fullName), generatedPassword);
+                    result.credentials.add(new CredentialEntry(email, generatedPassword));
 
                     ProfileDocument profile = ProfileDocument.builder()
                             .userId(savedUser.getId())
@@ -304,6 +321,7 @@ public class BulkImportService {
         private int updated  = 0;
         private int skipped  = 0;
         private List<ErrorEntry> errors = new ArrayList<>();
+        private List<CredentialEntry> credentials = new ArrayList<>();
 
         public void addError(int row, String message) {
             errors.add(new ErrorEntry(row, message));
@@ -315,5 +333,12 @@ public class BulkImportService {
     public static class ErrorEntry {
         private int row;
         private String message;
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class CredentialEntry {
+        private String email;
+        private String password;
     }
 }

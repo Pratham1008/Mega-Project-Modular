@@ -30,7 +30,11 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<JwtResponse> refresh(@RequestParam String token) {
+    public ResponseEntity<JwtResponse> refresh(@RequestBody Map<String, String> body) {
+        String token = body.get("token");
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Refresh token is required in request body");
+        }
         return ResponseEntity.ok(authService.refreshToken(token));
     }
 

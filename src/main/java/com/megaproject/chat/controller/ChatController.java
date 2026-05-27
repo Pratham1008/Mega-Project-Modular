@@ -3,11 +3,9 @@ package com.megaproject.chat.controller;
 import com.megaproject.chat.dto.*;
 import com.megaproject.chat.model.*;
 import com.megaproject.chat.service.ChatService;
-import com.megaproject.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.messaging.handler.annotation.*;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +19,6 @@ import java.util.Map;
 public class ChatController {
 
     private final ChatService chatService;
-    private final SimpMessagingTemplate broker;
-    private final FcmService fcmService;
 
     @PostMapping("/dm/{otherUserId}")
     public ResponseEntity<?> startDm(
@@ -36,9 +32,8 @@ public class ChatController {
                         .body(Map.of("error", "Admin cannot use chat functionality"));
             }
             return ResponseEntity.ok(chatService.getOrCreateDm(me, otherUserId));
-        } catch (ChatService.NotConnectedException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "not connected", "message", e.getMessage()));
+        } catch (com.megaproject.common.exception.NotConnectedException e) {
+            return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -71,30 +66,7 @@ public class ChatController {
             return ResponseEntity.badRequest().body(Map.of("error", "Content is required"));
         }
 
-        ChatMessage saved = chatService.saveMessage(conversationId, senderId, senderName, null, content);
-
-        // Broadcast via WebSocket for web clients
-        broker.convertAndSend("/topic/conversation/" + conversationId, saved);
-
-        // Send FCM push notification to other participants
-        String finalSenderName = senderName;
-        chatService.getConversationById(conversationId).ifPresent(conv -> {
-            for (String participantId : conv.getParticipantIds()) {
-                if (!participantId.equals(senderId)) {
-                    String preview = saved.getContent().length() > 60
-                            ? saved.getContent().substring(0, 60) + "…"
-                            : saved.getContent();
-                    fcmService.sendToUser(participantId, finalSenderName, preview,
-                            Map.of("type", "CHAT_MESSAGE", "conversationId", conversationId));
-
-                    // Also notify via WebSocket
-                    broker.convertAndSend("/topic/user/" + participantId + "/notifications",
-                            Map.of("type", "NEW_MESSAGE", "conversationId", conversationId,
-                                    "senderName", finalSenderName, "preview", preview));
-                }
-            }
-        });
-
+        ChatMessage saved = chatService.sendAndNotify(conversationId, senderId, senderName, null, content);
         return ResponseEntity.ok(saved);
     }
 
@@ -110,31 +82,8 @@ public class ChatController {
         String senderName  = (String) attrs.getOrDefault("name", "User");
         String senderPhoto = (String) attrs.getOrDefault("photo", null);
 
-        ChatMessage saved = chatService.saveMessage(
+        chatService.sendAndNotify(
                 req.getConversationId(), senderId, senderName, senderPhoto, req.getContent());
-
-        broker.convertAndSend("/topic/conversation/" + req.getConversationId(), saved);
-
-        chatService.getConversationById(req.getConversationId()).ifPresent(conv -> {
-            for (String participantId : conv.getParticipantIds()) {
-                if (!participantId.equals(senderId)) {
-                    String preview = saved.getContent().length() > 40
-                            ? saved.getContent().substring(0, 40) + "…"
-                            : saved.getContent();
-                    // Send FCM push notification
-                    fcmService.sendToUser(participantId, senderName, preview,
-                            Map.of("type", "CHAT_MESSAGE", "conversationId", req.getConversationId()));
-
-                    Map<String, Object> notification = Map.of(
-                            "type", "NEW_MESSAGE",
-                            "conversationId", req.getConversationId(),
-                            "senderName", senderName,
-                            "preview", preview
-                    );
-                    broker.convertAndSend("/topic/user/" + participantId + "/notifications", notification);
-                }
-            }
-        });
     }
 
     @MessageMapping("/chat.seen")

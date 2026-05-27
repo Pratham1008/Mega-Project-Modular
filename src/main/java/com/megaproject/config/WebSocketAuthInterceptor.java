@@ -30,39 +30,39 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
 
         String token = extractToken(request);
 
-        if (token != null && !token.isBlank()) {
-            try {
-                Jwt jwt = jwtDecoder.decode(token);
-                String userId = jwt.getSubject();
-                attributes.put("userId", userId);
-                attributes.put("role", jwt.getClaimAsString("role") != null
-                        ? jwt.getClaimAsString("role") : "USER");
-
-                profileRepository.findByUserId(userId).ifPresentOrElse(
-                        profile -> {
-                            attributes.put("name", profile.getFullName() != null
-                                    ? profile.getFullName() : "User");
-                            if (profile.getPhotoUrl() != null) {
-                                attributes.put("photo", profile.getPhotoUrl());
-                            }
-                        },
-                        () -> {
-                            String email = jwt.getClaimAsString("email");
-                            attributes.put("name", email != null ? email.split("@")[0] : "User");
-                        }
-                );
-
-
-
-            } catch (JwtException e) {
-                log.warn("WS JWT validation failed: {}", e.getMessage());
-                setAnonymous(attributes);
-            }
-        } else {
-            setAnonymous(attributes);
+        if (token == null || token.isBlank()) {
+            log.warn("WS Handshake rejected: Missing WebSocket JWT token");
+            response.setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
+            return false;
         }
 
-        return true;
+        try {
+            Jwt jwt = jwtDecoder.decode(token);
+            String userId = jwt.getSubject();
+            attributes.put("userId", userId);
+            attributes.put("role", jwt.getClaimAsString("role") != null
+                    ? jwt.getClaimAsString("role") : "USER");
+
+            profileRepository.findByUserId(userId).ifPresentOrElse(
+                    profile -> {
+                        attributes.put("name", profile.getFullName() != null
+                                ? profile.getFullName() : "User");
+                        if (profile.getPhotoUrl() != null) {
+                            attributes.put("photo", profile.getPhotoUrl());
+                        }
+                    },
+                    () -> {
+                        String email = jwt.getClaimAsString("email");
+                        attributes.put("name", email != null ? email.split("@")[0] : "User");
+                    }
+            );
+
+            return true;
+        } catch (JwtException e) {
+            log.warn("WS Handshake rejected: Invalid JWT: {}", e.getMessage());
+            response.setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
+            return false;
+        }
     }
 
     @Override
@@ -71,31 +71,31 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
     }
 
     private String extractToken(ServerHttpRequest request) {
-        if (request instanceof ServletServerHttpRequest servletReq) {
-            String token = servletReq.getServletRequest().getParameter("token");
-            if (token != null && !token.isBlank()) {
+        // Priority 1: Check Authorization header (secure method)
+        String authHeader = request.getHeaders().getFirst("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (!token.isBlank()) {
                 return token;
             }
         }
 
-        String query = request.getURI().getQuery();
-        if (query != null) {
-            for (String param : query.split("&")) {
-                if (param.startsWith("token=")) {
-                    String token = param.substring(6);
-                    if (!token.isBlank()) {
-                        return token;
-                    }
-                }
+        // Priority 2: Check custom X-Auth-Token header (for SockJS/STOMP)
+        String customHeader = request.getHeaders().getFirst("X-Auth-Token");
+        if (customHeader != null && !customHeader.isBlank()) {
+            return customHeader;
+        }
+
+        // Priority 3: Fallback to query param (deprecated — for old clients during migration)
+        if (request instanceof ServletServerHttpRequest servletReq) {
+            String token = servletReq.getServletRequest().getParameter("token");
+            if (token != null && !token.isBlank()) {
+                log.warn("WS token via query param is deprecated. Client: {}", 
+                        servletReq.getServletRequest().getRemoteAddr());
+                return token;
             }
         }
 
         return null;
-    }
-
-    private void setAnonymous(Map<String, Object> attributes) {
-        attributes.put("userId", "anonymous");
-        attributes.put("name", "Anonymous");
-        attributes.put("role", "GUEST");
     }
 }

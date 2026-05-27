@@ -9,6 +9,9 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.*;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.stereotype.Service;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import com.megaproject.common.exception.NotConnectedException;
+import com.megaproject.notification.service.FcmService;
 
 import java.time.Instant;
 import java.util.*;
@@ -22,6 +25,8 @@ public class ChatService {
     private final ConnectionRepository connectionRepo;
     private final ProfileRepository profileRepo;
     private final MongoTemplate mongoTemplate;
+    private final SimpMessagingTemplate broker;
+    private final FcmService fcmService;
 
     public Conversation getOrCreateDm(String requesterId, String otherUserId) {
         if (connectionRepo.findAcceptedConnection(requesterId, otherUserId).isEmpty())
@@ -68,6 +73,38 @@ public class ChatService {
         return saved;
     }
 
+    public ChatMessage sendAndNotify(String conversationId, String senderId,
+                                     String senderName, String senderPhoto, String content) {
+        ChatMessage saved = saveMessage(conversationId, senderId, senderName, senderPhoto, content);
+
+        // Broadcast via WebSocket for web clients
+        broker.convertAndSend("/topic/conversation/" + conversationId, saved);
+
+        // Send push notifications and WS notifications to other participants
+        getConversationById(conversationId).ifPresent(conv -> {
+            String preview = saved.getContent().length() > 60
+                    ? saved.getContent().substring(0, 60) + "…"
+                    : saved.getContent();
+
+            for (String participantId : conv.getParticipantIds()) {
+                if (!participantId.equals(senderId)) {
+                    fcmService.sendToUser(participantId, senderName, preview,
+                            Map.of("type", "CHAT_MESSAGE", "conversationId", conversationId));
+
+                    Map<String, Object> notification = Map.of(
+                            "type", "NEW_MESSAGE",
+                            "conversationId", conversationId,
+                            "senderName", senderName,
+                            "preview", preview
+                    );
+                    broker.convertAndSend("/topic/user/" + participantId + "/notifications", notification);
+                }
+            }
+        });
+
+        return saved;
+    }
+
     public void markRead(String conversationId, String userId) {
         Query query = new Query(Criteria.where("conversationId").is(conversationId)
                 .and("read").is(false).and("senderId").ne(userId));
@@ -103,7 +140,5 @@ public class ChatService {
                         .build()));
     }
 
-    public static class NotConnectedException extends RuntimeException {
-        public NotConnectedException(String msg) { super(msg); }
-    }
+
 }

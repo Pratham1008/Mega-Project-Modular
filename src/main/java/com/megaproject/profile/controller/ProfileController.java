@@ -20,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -96,10 +97,13 @@ public class ProfileController {
 
     
     @GetMapping("/batch")
-    public ResponseEntity<List<ProfileSummaryResponse>> getBatchMates(
+    public ResponseEntity<PageDTO<ProfileSummaryResponse>> getBatchMates(
             @RequestParam String department,
-            @RequestParam int passingYear) {
-        return ResponseEntity.ok(profileService.getBatchMates(department, passingYear));
+            @RequestParam int passingYear,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(size, 100));
+        return ResponseEntity.ok(PageDTO.from(profileService.getBatchMatesPaged(department, passingYear, pageable)));
     }
 
     @DeleteMapping("/{userId}")
@@ -125,31 +129,38 @@ public class ProfileController {
     }
 
     @GetMapping("/map")
-    public ResponseEntity<List<Map<String, Object>>> mapProfiles() {
-        List<Map<String, Object>> pins = profileRepository.findProfilesWithLocation(ProfileType.ALUMNI)
-                .stream()
-                .map(p -> Map.<String, Object>of(
-                        "userId", p.getUserId(),
-                        "fullName", p.getFullName() != null ? p.getFullName() : "",
-                        "photoUrl", p.getPhotoUrl() != null ? p.getPhotoUrl() : "",
-                        "location", p.getLocation(),
-                        "department", p.getDepartment() != null ? p.getDepartment() : "",
-                        "profileType", p.getProfileType() != null ? p.getProfileType().name() : "",
-                        "company", p.getCompany() != null ? p.getCompany() : "",
-                        "passingYear", p.getPassingYear() != null ? p.getPassingYear() : 0
-                ))
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(pins);
+    public ResponseEntity<PageDTO<Map<String, Object>>> mapProfiles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "200") int size) {
+        PageRequest pageable = PageRequest.of(page, Math.min(size, 1000));
+        Page<ProfileDocument> paged = profileService.getProfilesWithLocationPaged(ProfileType.ALUMNI, pageable);
+
+        Page<Map<String, Object>> mapped = paged.map(p -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("userId", p.getUserId() != null ? p.getUserId() : "");
+            map.put("fullName", p.getFullName() != null ? p.getFullName() : "");
+            map.put("photoUrl", p.getPhotoUrl() != null ? p.getPhotoUrl() : "");
+            map.put("location", p.getLocation() != null ? p.getLocation() : "");
+            map.put("department", p.getDepartment() != null ? p.getDepartment() : "");
+            map.put("profileType", p.getProfileType() != null ? p.getProfileType().name() : "");
+            map.put("company", p.getCompany() != null ? p.getCompany() : "");
+            map.put("passingYear", p.getPassingYear() != null ? p.getPassingYear() : 0);
+            return map;
+        });
+
+        return ResponseEntity.ok(PageDTO.from(mapped));
     }
 
     @GetMapping("/search/alumni")
-    public ResponseEntity<List<AlumniSearchResponse>> searchAlumni(
+    public ResponseEntity<PageDTO<AlumniSearchResponse>> searchAlumni(
             @RequestParam(value = "q", required = false) String query,
             @RequestParam(value = "department", required = false) String department,
             @RequestParam(value = "company", required = false) String company,
             @RequestParam(value = "passingYear", required = false) Integer passingYear,
-            @RequestParam(value = "location", required = false) String location) {
-        return ResponseEntity.ok(alumniSearchService.searchWithFilters(query, department, company, passingYear, location));
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(PageDTO.from(alumniSearchService.searchWithFilters(query, department, company, passingYear, location, page, size)));
     }
 
     private void validateOwnership(Jwt jwt, String userId) {

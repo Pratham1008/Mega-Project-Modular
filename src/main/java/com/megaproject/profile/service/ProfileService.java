@@ -12,6 +12,7 @@ import com.megaproject.profile.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -24,9 +25,13 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import com.megaproject.notification.service.EmailService;
+import java.security.SecureRandom;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
@@ -35,6 +40,18 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MongoTemplate mongoTemplate;
+    private final EmailService emailService;
+
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+        StringBuilder sb = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) {
+            sb.append(chars.charAt(secureRandom.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
 
     public EducationalProfileResponse createEducationalProfile(EducationalProfileRequest req) {
         if (profileRepository.existsByUserId(req.getUserId()))
@@ -72,14 +89,17 @@ public class ProfileService {
             throw new ProfileAlreadyExistsException("Profile already exists for email: " + email);
 
         var user = userRepository.findByEmail(email).orElseGet(() -> {
-            String prefix = email.split("@")[0];
+            String generatedPassword = generateRandomPassword();
             var newUser = com.megaproject.auth.model.User.builder()
                     .email(email)
-                    .password(passwordEncoder.encode("KIT@" + prefix))
+                    .password(passwordEncoder.encode(generatedPassword))
                     .role(Role.FACULTY)
                     .verified(true)
                     .build();
-            return userRepository.save(newUser);
+            var savedUser = userRepository.save(newUser);
+            emailService.sendCredentialsEmail(email, req.getFullName(), generatedPassword);
+            log.info("Provisioned new Faculty account: {} (credentials sent via email)", email);
+            return savedUser;
         });
 
         ProfileDocument doc = profileMapper.toDocument(req);
@@ -111,13 +131,13 @@ public class ProfileService {
     }
 
     public List<ProfileSummaryResponse> getProfilesByType(ProfileType type) {
-        return profileRepository.findByProfileTypeAndDeletedFalse(type)
-                .stream().map(profileMapper::toSummary).toList();
+        // Delegate to paginated version with max 500 results to prevent OOM
+        return getProfilesByTypePaged(type, PageRequest.of(0, 500)).getContent();
     }
 
     public List<ProfileSummaryResponse> getAllProfiles() {
-        return profileRepository.findByDeletedFalse()
-                .stream().map(profileMapper::toSummary).toList();
+        // Delegate to paginated version with max 500 results to prevent OOM
+        return getAllProfilesPaged(PageRequest.of(0, 500)).getContent();
     }
 
     public Page<ProfileSummaryResponse> getProfilesByTypePaged(ProfileType type, Pageable pageable) {
@@ -133,6 +153,15 @@ public class ProfileService {
     public List<ProfileSummaryResponse> getBatchMates(String department, int passingYear) {
         return profileRepository.findByDepartmentAndPassingYearAndDeletedFalse(department, passingYear)
                 .stream().filter(ProfileDocument::isApproved).map(profileMapper::toSummary).toList();
+    }
+
+    public Page<ProfileSummaryResponse> getBatchMatesPaged(String department, int passingYear, Pageable pageable) {
+        return profileRepository.findByDepartmentAndPassingYearAndDeletedFalseAndApprovedTrue(department, passingYear, pageable)
+                .map(profileMapper::toSummary);
+    }
+
+    public Page<ProfileDocument> getProfilesWithLocationPaged(ProfileType type, Pageable pageable) {
+        return profileRepository.findProfilesWithLocationPaged(type, pageable);
     }
 
     // OPTIMIZED: single aggregation instead of 3 separate count queries

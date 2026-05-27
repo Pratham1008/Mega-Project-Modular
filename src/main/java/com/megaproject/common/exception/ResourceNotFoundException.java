@@ -1,6 +1,4 @@
-package com.megaproject.auth.exception;
-// DEPRECATED: Use com.megaproject.common.exception.ResourceNotFoundException instead
-@Deprecated
+package com.megaproject.common.exception;
 public class ResourceNotFoundException extends RuntimeException {
     public ResourceNotFoundException(String message) { super(message); }
 }
