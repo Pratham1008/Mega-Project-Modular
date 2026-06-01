@@ -1,11 +1,11 @@
 package com.megaproject.chat.controller;
 
-import com.megaproject.chat.dto.*;
-import com.megaproject.chat.model.*;
+import com.megaproject.chat.model.ChatMessage;
+import com.megaproject.chat.model.Conversation;
 import com.megaproject.chat.service.ChatService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.*;
-import org.springframework.messaging.handler.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -13,10 +13,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * HTTP REST endpoints for the chat feature.
+ * WebSocket @MessageMapping handlers live in ChatWebSocketController.
+ */
 @RestController
 @RequestMapping("/chat")
 @RequiredArgsConstructor
-public class ChatController {
+public class ChatRestController {
 
     private final ChatService chatService;
 
@@ -52,7 +56,6 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getMessages(conversationId, page, size));
     }
 
-    // REST endpoint for sending messages (used by mobile app)
     @PostMapping("/messages/{conversationId}")
     public ResponseEntity<?> sendMessageRest(
             @PathVariable String conversationId,
@@ -73,26 +76,5 @@ public class ChatController {
     @GetMapping("/unread")
     public ResponseEntity<Map<String, Long>> unread(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(chatService.getUnreadCounts(jwt.getSubject()));
-    }
-
-    @MessageMapping("/chat.send")
-    public void sendMessage(@Payload ChatMessageRequest req,
-                            @Header("simpSessionAttributes") Map<String, Object> attrs) {
-        String senderId    = (String) attrs.getOrDefault("userId", "unknown");
-        String senderName  = (String) attrs.getOrDefault("name", "User");
-        String senderPhoto = (String) attrs.getOrDefault("photo", null);
-
-        chatService.sendAndNotify(
-                req.getConversationId(), senderId, senderName, senderPhoto, req.getContent());
-    }
-
-    @MessageMapping("/chat.seen")
-    public void markSeen(@Payload Map<String, String> payload,
-                         @Header("simpSessionAttributes") Map<String, Object> attrs) {
-        String userId = (String) attrs.getOrDefault("userId", "");
-        String conversationId = payload.get("conversationId");
-        if (userId != null && conversationId != null) {
-            chatService.markRead(conversationId, userId);
-        }
     }
 }

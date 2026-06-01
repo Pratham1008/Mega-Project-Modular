@@ -26,10 +26,10 @@ public class JwtConfig {
     private final long accessTokenExpirySeconds = 3600 * 24L;       
     private final long refreshTokenExpirySeconds = 3600 * 24 * 7L;  
 
-    @Value("${app.jwt.rsa-public-key:}")
+    @Value("${app.jwt.rsa-public-key}")
     private String rsaPublicKeyPem;
 
-    @Value("${app.jwt.rsa-private-key:}")
+    @Value("${app.jwt.rsa-private-key}")
     private String rsaPrivateKeyPem;
 
     private RSAPublicKey publicKey;
@@ -40,7 +40,7 @@ public class JwtConfig {
     public void initKeys() throws NoSuchAlgorithmException, InvalidKeySpecException {
         if (rsaPublicKeyPem != null && !rsaPublicKeyPem.isBlank()
                 && rsaPrivateKeyPem != null && !rsaPrivateKeyPem.isBlank()) {
-            // Load keys from environment variables
+
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
             byte[] publicKeyBytes = Base64.getDecoder().decode(stripPemHeaders(rsaPublicKeyPem));
@@ -52,7 +52,6 @@ public class JwtConfig {
             this.keyId = UUID.randomUUID().toString();
             log.info("RSA keypair loaded from environment variables, kid = {}", keyId);
         } else {
-            // Dev mode: auto-generate keys
             log.warn("JWT_RSA_PUBLIC_KEY / JWT_RSA_PRIVATE_KEY not set — generating ephemeral RSA keypair (dev mode). "
                     + "Tokens will NOT survive restarts!");
             KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
@@ -74,6 +73,8 @@ public class JwtConfig {
                 .replace("-----END PUBLIC KEY-----", "")
                 .replace("-----BEGIN PRIVATE KEY-----", "")
                 .replace("-----END PRIVATE KEY-----", "")
+                .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                .replace("-----END RSA PRIVATE KEY-----", "")
                 .replaceAll("\\s+", "");
     }
 }

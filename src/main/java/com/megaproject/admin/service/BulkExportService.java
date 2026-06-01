@@ -1,270 +1,171 @@
 package com.megaproject.admin.service;
 
+import com.megaproject.profile.dto.response.AlumniSearchResponse;
 import com.megaproject.profile.model.ProfileDocument;
-import com.megaproject.profile.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;   // ← streaming API; low memory
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
-import com.megaproject.profile.dto.response.AlumniSearchResponse;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class BulkExportService {
 
-    private final ProfileRepository profileRepository;
+    private final MongoTemplate mongoTemplate;
 
-        private static final String[] HEADERS = {
-            "Sr. No",
-            "PRN",
-            "Student Name ( Surname Name Middle)",
-            "Gender",
-            "Date Of Birth (MM/DD/YY)",
-            "Email ID",
-            "Mobile Number",
-            "Full  Address with Pin Code",
-            "Pin Code",
-            "City as per Domicile Certificate",
-            "Home District",
-            "State as per Domicile Certificate",
-            "Branch",
-            "Profile Type",
-            "Admission Year",
-            "Passing Year",
-            "Current Semester",
-            "Job Title",
-            "Company",
-            "Location",
-            "Skills",
-            "Resume URL",
-            "Photo URL",
-            "Blood Group",
-            "LinkedIn URL",
-            "GitHub URL",
-            "Instagram URL",
-            "Approved"
+    private static final String[] HEADERS = {
+            "Sr. No","PRN","Student Name","Gender","Date Of Birth","Email ID","Mobile Number",
+            "Full Address","Pin Code","City","District","State","Branch","Profile Type",
+            "Admission Year","Passing Year","Job Title","Company","Location","Skills",
+            "Resume URL","Photo URL","Blood Group","LinkedIn URL","GitHub URL","Instagram URL","Approved"
+    };
+
+    private static final String[] FILTERED_HEADERS = {
+            "Sr. No","Name","Email","Profile Type","Job Title","Company",
+            "Location","Department","Passing Year","Skills"
     };
 
     public byte[] exportToExcel() throws IOException {
-        List<ProfileDocument> profiles = profileRepository.findByDeletedFalse();
 
-        try (Workbook workbook = new XSSFWorkbook();
+        try (SXSSFWorkbook workbook = new SXSSFWorkbook(100);
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-            Sheet sheet = workbook.createSheet("CSE");
+            Sheet sheet = workbook.createSheet("KIT");
 
-            
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerFont.setFontHeightInPoints((short) 11);
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            headerStyle.setBorderBottom(BorderStyle.THIN);
-
-            
+            CellStyle headerStyle = buildHeaderStyle(workbook);
             Row titleRow = sheet.createRow(0);
-            Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("KIT's College of Engineering Kolhapur (Empowered Autonomous)");
-            CellStyle titleStyle = workbook.createCellStyle();
-            Font titleFont = workbook.createFont();
-            titleFont.setBold(true);
-            titleFont.setFontHeightInPoints((short) 14);
-            titleStyle.setFont(titleFont);
-            titleCell.setCellStyle(titleStyle);
+            titleRow.createCell(0).setCellValue(
+                    "KIT's College of Engineering Kolhapur (Empowered Autonomous)");
 
-            
             Row headerRow = sheet.createRow(1);
             for (int i = 0; i < HEADERS.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(HEADERS[i]);
-                cell.setCellStyle(headerStyle);
+                Cell c = headerRow.createCell(i);
+                c.setCellValue(HEADERS[i]);
+                c.setCellStyle(headerStyle);
             }
 
-            
-            int rowIdx = 2;
-            int serial = 1;
-            for (ProfileDocument p : profiles) {
-                Row row = sheet.createRow(rowIdx++);
-                int col = 0;
+            Query q = new Query(Criteria.where("deleted").is(false));
+            q.fields()
+                    .include("registrationNumber","fullName","gender","dateOfBirth","email",
+                            "phone","address","department","profileType","admissionYear",
+                            "passingYear","jobTitle","company","location","skills",
+                            "resumeUrl","photoUrl","bloodGroup","socials","approved");
 
-                row.createCell(col++).setCellValue(serial++);                               
-                row.createCell(col++).setCellValue(safe(p.getRegistrationNumber()));         
-                row.createCell(col++).setCellValue(safe(p.getFullName()));                   
-                row.createCell(col++).setCellValue(safe(p.getGender()));                     
-                row.createCell(col++).setCellValue(safe(p.getDateOfBirth()));                
+            try (var data = mongoTemplate.stream(q, ProfileDocument.class)) {
+                AtomicInteger rowNum = new AtomicInteger(2);
+                AtomicInteger srNo   = new AtomicInteger(1);
 
-                row.createCell(col++).setCellValue(safe(p.getEmail()));                      
-                row.createCell(col++).setCellValue(safe(p.getPhone()));                      
-
-                
-                String street = "", pinCode = "", city = "", district = "", state = "";
-                if (p.getAddress() != null) {
-                    street = safe(p.getAddress().getStreet());
-                    pinCode = safe(p.getAddress().getPostalCode());
-                    city = safe(p.getAddress().getCity());
-                    state = safe(p.getAddress().getState());
-                    district = city; // district not stored separately, use city
+                Iterator<ProfileDocument> cursor = data.iterator();
+                while (cursor.hasNext()) {
+                    ProfileDocument p = cursor.next();
+                    Row row = sheet.createRow(rowNum.getAndIncrement());
+                    writeProfileRow(row, srNo.getAndIncrement(), p);
                 }
-                row.createCell(col++).setCellValue(street);                                  // Full Address with Pin Code
-                row.createCell(col++).setCellValue(pinCode);                                 // Pin Code
-                row.createCell(col++).setCellValue(city);                                    // City as per Domicile Certificate
-                row.createCell(col++).setCellValue(district);                                // Home District
-                row.createCell(col++).setCellValue(state);                                   // State as per Domicile Certificate
 
-                row.createCell(col++).setCellValue(safe(p.getDepartment()));                  // Branch
-                row.createCell(col++).setCellValue(
-                        p.getProfileType() != null ? p.getProfileType().name() : "");        // Profile Type
-                row.createCell(col++).setCellValue(
-                        p.getAdmissionYear() != null ? p.getAdmissionYear() : 0);            // Admission Year
-                row.createCell(col++).setCellValue(
-                        p.getPassingYear() != null ? p.getPassingYear() : 0);                // Passing Year
-                row.createCell(col++).setCellValue(
-                        p.getCurrentSemester() != null ? p.getCurrentSemester() : 0);        // Current Semester
-
-                row.createCell(col++).setCellValue(safe(p.getJobTitle()));                   // Job Title
-                row.createCell(col++).setCellValue(safe(p.getCompany()));                    // Company
-                row.createCell(col++).setCellValue(safe(p.getLocation()));                   // Location
-
-                // Skills as comma-separated
-                String skills = (p.getSkills() != null && !p.getSkills().isEmpty())
-                        ? String.join(", ", p.getSkills()) : "";
-                row.createCell(col++).setCellValue(skills);                                  // Skills
-
-                row.createCell(col++).setCellValue(safe(p.getResumeUrl()));                  // Resume URL
-                row.createCell(col++).setCellValue(safe(p.getPhotoUrl()));                   // Photo URL
-                row.createCell(col++).setCellValue(safe(p.getBloodGroup()));                 // Blood Group
-
-                // Socials
-                String linkedin = "", github = "", instagram = "";
-                if (p.getSocials() != null) {
-                    linkedin = safe(p.getSocials().getLinkedinUrl());
-                    github = safe(p.getSocials().getGithubUrl());
-                    instagram = safe(p.getSocials().getInstagramUrl());
-                }
-                row.createCell(col++).setCellValue(linkedin);                                // LinkedIn URL
-                row.createCell(col++).setCellValue(github);                                  // GitHub URL
-                row.createCell(col++).setCellValue(instagram);                               // Instagram URL
-
-                row.createCell(col).setCellValue(p.isApproved() ? "Yes" : "No");            
-            }
-
-            
-            for (int i = 0; i < HEADERS.length; i++) {
-                sheet.autoSizeColumn(i);
             }
 
             workbook.write(out);
+            workbook.close();
             return out.toByteArray();
         }
-    }
-
-    private String safe(String val) {
-        return val != null ? val : "";
     }
 
     /**
-     * Export a filtered set of profiles (from search results) to Excel.
+     * Export a pre-filtered list of search results to Excel.
+     * Uses a slimmer column set since search results don't carry all profile fields.
      */
     public byte[] exportFilteredToExcel(List<AlumniSearchResponse> results) throws IOException {
-        // Look up full ProfileDocuments for the filtered user IDs
-        List<String> userIds = results.stream().map(AlumniSearchResponse::getUserId).toList();
-        List<ProfileDocument> profiles = profileRepository.findAllByUserIdIn(userIds);
 
-        try (Workbook workbook = new XSSFWorkbook();
+        try (SXSSFWorkbook workbook = new SXSSFWorkbook(100);
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-            Sheet sheet = workbook.createSheet("Filtered Export");
+            Sheet sheet = workbook.createSheet("Filtered Alumni");
 
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerFont.setFontHeightInPoints((short) 11);
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            headerStyle.setBorderBottom(BorderStyle.THIN);
-
-            Row titleRow = sheet.createRow(0);
-            Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("KIT's College of Engineering — Filtered Export (" + profiles.size() + " records)");
-            CellStyle titleStyle = workbook.createCellStyle();
-            Font titleFont = workbook.createFont();
-            titleFont.setBold(true);
-            titleFont.setFontHeightInPoints((short) 14);
-            titleStyle.setFont(titleFont);
-            titleCell.setCellStyle(titleStyle);
-
-            Row headerRow = sheet.createRow(1);
-            for (int i = 0; i < HEADERS.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(HEADERS[i]);
-                cell.setCellStyle(headerStyle);
+            CellStyle headerStyle = buildHeaderStyle(workbook);
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < FILTERED_HEADERS.length; i++) {
+                Cell c = headerRow.createCell(i);
+                c.setCellValue(FILTERED_HEADERS[i]);
+                c.setCellStyle(headerStyle);
             }
 
-            int rowIdx = 2;
-            int serial = 1;
-            for (ProfileDocument p : profiles) {
+            int rowIdx = 1;
+            int srNo = 1;
+            for (AlumniSearchResponse r : results) {
                 Row row = sheet.createRow(rowIdx++);
                 int col = 0;
-                row.createCell(col++).setCellValue(serial++);
-                row.createCell(col++).setCellValue(safe(p.getRegistrationNumber()));
-                row.createCell(col++).setCellValue(safe(p.getFullName()));
-                row.createCell(col++).setCellValue(safe(p.getGender()));
-                row.createCell(col++).setCellValue(safe(p.getDateOfBirth()));
-                row.createCell(col++).setCellValue(safe(p.getEmail()));
-                row.createCell(col++).setCellValue(safe(p.getPhone()));
-                String street = "", pinCode = "", city = "", district = "", state = "";
-                if (p.getAddress() != null) {
-                    street = safe(p.getAddress().getStreet());
-                    pinCode = safe(p.getAddress().getPostalCode());
-                    city = safe(p.getAddress().getCity());
-                    state = safe(p.getAddress().getState());
-                    district = city;
-                }
-                row.createCell(col++).setCellValue(street);
-                row.createCell(col++).setCellValue(pinCode);
-                row.createCell(col++).setCellValue(city);
-                row.createCell(col++).setCellValue(district);
-                row.createCell(col++).setCellValue(state);
-                row.createCell(col++).setCellValue(safe(p.getDepartment()));
-                row.createCell(col++).setCellValue(p.getProfileType() != null ? p.getProfileType().name() : "");
-                row.createCell(col++).setCellValue(p.getAdmissionYear() != null ? p.getAdmissionYear() : 0);
-                row.createCell(col++).setCellValue(p.getPassingYear() != null ? p.getPassingYear() : 0);
-                row.createCell(col++).setCellValue(p.getCurrentSemester() != null ? p.getCurrentSemester() : 0);
-                row.createCell(col++).setCellValue(safe(p.getJobTitle()));
-                row.createCell(col++).setCellValue(safe(p.getCompany()));
-                row.createCell(col++).setCellValue(safe(p.getLocation()));
-                String skills = (p.getSkills() != null && !p.getSkills().isEmpty()) ? String.join(", ", p.getSkills()) : "";
-                row.createCell(col++).setCellValue(skills);
-                row.createCell(col++).setCellValue(safe(p.getResumeUrl()));
-                row.createCell(col++).setCellValue(safe(p.getPhotoUrl()));
-                row.createCell(col++).setCellValue(safe(p.getBloodGroup()));
-                String linkedin = "", github = "", instagram = "";
-                if (p.getSocials() != null) {
-                    linkedin = safe(p.getSocials().getLinkedinUrl());
-                    github = safe(p.getSocials().getGithubUrl());
-                    instagram = safe(p.getSocials().getInstagramUrl());
-                }
-                row.createCell(col++).setCellValue(linkedin);
-                row.createCell(col++).setCellValue(github);
-                row.createCell(col++).setCellValue(instagram);
-                row.createCell(col).setCellValue(p.isApproved() ? "Yes" : "No");
-            }
-
-            for (int i = 0; i < HEADERS.length; i++) {
-                sheet.autoSizeColumn(i);
+                row.createCell(col++).setCellValue(srNo++);
+                row.createCell(col++).setCellValue(str(r.getFullName()));
+                row.createCell(col++).setCellValue(str(r.getEmail()));
+                row.createCell(col++).setCellValue(str(r.getProfileType()));
+                row.createCell(col++).setCellValue(str(r.getJobTitle()));
+                row.createCell(col++).setCellValue(str(r.getCompany()));
+                row.createCell(col++).setCellValue(str(r.getLocation()));
+                row.createCell(col++).setCellValue(str(r.getDepartment()));
+                row.createCell(col++).setCellValue(r.getPassingYear() != null ? r.getPassingYear() : 0);
+                row.createCell(col).setCellValue(
+                        r.getSkills() != null ? String.join(", ", r.getSkills()) : "");
             }
 
             workbook.write(out);
+            workbook.close();
             return out.toByteArray();
         }
     }
+
+    private void writeProfileRow(Row row, int srNo, ProfileDocument p) {
+        int col = 0;
+        row.createCell(col++).setCellValue(srNo);
+        row.createCell(col++).setCellValue(str(p.getRegistrationNumber()));
+        row.createCell(col++).setCellValue(str(p.getFullName()));
+        row.createCell(col++).setCellValue(str(p.getGender()));
+        row.createCell(col++).setCellValue(str(p.getDateOfBirth()));
+        row.createCell(col++).setCellValue(str(p.getEmail()));
+        row.createCell(col++).setCellValue(str(p.getPhone()));
+        var addr = p.getAddress();
+        row.createCell(col++).setCellValue(addr != null ? str(addr.getStreet()) : "");
+        row.createCell(col++).setCellValue(addr != null ? str(addr.getPostalCode()) : "");
+        row.createCell(col++).setCellValue(addr != null ? str(addr.getCity()) : "");
+        row.createCell(col++).setCellValue(""); // district not stored separately
+        row.createCell(col++).setCellValue(addr != null ? str(addr.getState()) : "");
+        row.createCell(col++).setCellValue(str(p.getDepartment()));
+        row.createCell(col++).setCellValue(p.getProfileType() != null ? p.getProfileType().name() : "");
+        row.createCell(col++).setCellValue(p.getAdmissionYear());
+        row.createCell(col++).setCellValue(p.getPassingYear());
+        row.createCell(col++).setCellValue(str(p.getJobTitle()));
+        row.createCell(col++).setCellValue(str(p.getCompany()));
+        row.createCell(col++).setCellValue(str(p.getLocation()));
+        row.createCell(col++).setCellValue(p.getSkills() != null ? String.join(", ", p.getSkills()) : "");
+        row.createCell(col++).setCellValue(str(p.getResumeUrl()));
+        row.createCell(col++).setCellValue(str(p.getPhotoUrl()));
+        row.createCell(col++).setCellValue(str(p.getBloodGroup()));
+        var s = p.getSocials();
+        row.createCell(col++).setCellValue(s != null ? str(s.getLinkedinUrl()) : "");
+        row.createCell(col++).setCellValue(s != null ? str(s.getGithubUrl()) : "");
+        row.createCell(col++).setCellValue(s != null ? str(s.getInstagramUrl()) : "");
+        row.createCell(col).setCellValue(p.isApproved() ? "Yes" : "No");
+    }
+
+    private CellStyle buildHeaderStyle(Workbook wb) {
+        CellStyle s = wb.createCellStyle();
+        Font f = wb.createFont(); f.setBold(true); f.setFontHeightInPoints((short) 11);
+        s.setFont(f);
+        s.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+        s.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        s.setBorderBottom(BorderStyle.THIN);
+        return s;
+    }
+
+    private static String str(String v) { return v == null ? "" : v; }
 }

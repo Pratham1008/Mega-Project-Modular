@@ -6,18 +6,12 @@ import com.megaproject.profile.model.ProfileDocument;
 import com.megaproject.profile.model.ProfileType;
 import com.megaproject.profile.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.TextCriteria;
-import org.springframework.data.mongodb.core.query.TextQuery;
+import org.springframework.data.mongodb.core.aggregation.*;
+import org.springframework.data.mongodb.core.query.*;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -29,69 +23,57 @@ public class AlumniSearchService {
     private final MongoTemplate mongoTemplate;
 
     public Page<AlumniSearchResponse> searchWithFilters(
-            String query, String department, String company, Integer passingYear, String location,
-            int page, int size) {
+            String query, String department, String company,
+            Integer passingYear, String location, int page, int size) {
 
-        Pageable pageable = PageRequest.of(page, Math.min(size, 100));
+        int safeSize = Math.min(size, 100);
+        Pageable pageable = PageRequest.of(page, safeSize);
 
-        boolean hasQuery = query != null && !query.isBlank();
-        boolean hasFilters = (department != null && !department.isBlank())
-                || (company != null && !company.isBlank())
-                || passingYear != null
-                || (location != null && !location.isBlank());
+        boolean hasQuery   = query != null && !query.isBlank();
+        boolean hasDept    = department != null && !department.isBlank();
+        boolean hasCo      = company    != null && !company.isBlank();
+        boolean hasYear    = passingYear != null;
+        boolean hasLoc     = location   != null && !location.isBlank();
+        boolean hasFilters = hasDept || hasCo || hasYear || hasLoc;
 
-        Query mongoQuery;
+        Query mongoQuery = hasQuery
+                ? TextQuery.queryText(TextCriteria.forDefaultLanguage().matchingPhrase(query)).sortByScore()
+                : new Query();
 
-        if (hasQuery && !hasFilters) {
-            // Pure text search — use $text index with sort by score
-            TextCriteria textCriteria = TextCriteria.forDefaultLanguage().matchingPhrase(query);
-            mongoQuery = TextQuery.queryText(textCriteria).sortByScore();
-            mongoQuery.addCriteria(Criteria.where("profileType").in(ProfileType.ALUMNI, ProfileType.STUDENT));
-            mongoQuery.addCriteria(Criteria.where("deleted").is(false));
-            mongoQuery.addCriteria(Criteria.where("approved").is(true));
-        } else {
-            // Filters present (possibly with text query)
-            List<Criteria> criteriaList = new ArrayList<>();
-            criteriaList.add(Criteria.where("profileType").in(ProfileType.ALUMNI, ProfileType.STUDENT));
-            criteriaList.add(Criteria.where("deleted").is(false));
-            criteriaList.add(Criteria.where("approved").is(true));
+        mongoQuery.addCriteria(Criteria.where("profileType").in(ProfileType.ALUMNI, ProfileType.STUDENT)
+                .and("deleted").is(false)
+                .and("approved").is(true));
 
-            if (hasQuery) {
-                // Use $text search for the query part alongside filter criteria
-                TextCriteria textCriteria = TextCriteria.forDefaultLanguage().matchingPhrase(query);
-                mongoQuery = TextQuery.queryText(textCriteria).sortByScore();
-            } else {
-                mongoQuery = new Query();
-            }
-
-            if (department != null && !department.isBlank())
-                criteriaList.add(Criteria.where("department").regex(department, "i"));
-            if (company != null && !company.isBlank())
-                criteriaList.add(Criteria.where("company").regex(company, "i"));
-            if (passingYear != null)
-                criteriaList.add(Criteria.where("passingYear").is(passingYear));
-            if (location != null && !location.isBlank())
-                criteriaList.add(Criteria.where("location").regex(location, "i"));
-
-            for (Criteria c : criteriaList) {
-                mongoQuery.addCriteria(c);
-            }
+        if (hasDept) {
+            mongoQuery.addCriteria(Criteria.where("department").is(department.trim()));
+        }
+        if (hasYear) {
+            mongoQuery.addCriteria(Criteria.where("passingYear").is(passingYear));
+        }
+        if (hasCo) {
+            mongoQuery.addCriteria(Criteria.where("company")
+                    .regex("^" + escapeRegex(company.trim()), "i"));
+        }
+        if (hasLoc) {
+            mongoQuery.addCriteria(Criteria.where("location")
+                    .regex(escapeRegex(location.trim()), "i"));
         }
 
-        // Field projection for efficiency
         mongoQuery.fields()
-                .include("userId", "fullName", "photoUrl", "department", "passingYear",
-                        "profileType", "company", "jobTitle", "location", "skills", "socials");
+                .include("userId","fullName","photoUrl","department","passingYear",
+                        "profileType","company","jobTitle","location","skills","socials");
 
-        // Get total count for pagination
-        long total = mongoTemplate.count(Query.of(mongoQuery).limit(-1).skip(-1), ProfileDocument.class);
+        long total = mongoTemplate.count(
+                Query.of(mongoQuery).limit(-1).skip(-1), ProfileDocument.class);
 
-        // Apply pagination
         mongoQuery.with(pageable);
-
         List<AlumniSearchResponse> results = mongoTemplate.find(mongoQuery, ProfileDocument.class)
                 .stream().map(profileMapper::toAlumniSearchResponse).toList();
 
         return new PageImpl<>(results, pageable, total);
+    }
+
+    private static String escapeRegex(String s) {
+        return s.replaceAll("([\\\\.*+?^${}()|\\[\\]])", "\\\\$1");
     }
 }

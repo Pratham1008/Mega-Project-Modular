@@ -8,8 +8,10 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface ProfileRepository extends MongoRepository<ProfileDocument, String> {
@@ -28,7 +30,7 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
 
     List<ProfileDocument> findByProfileTypeAndDeletedFalse(ProfileType profileType);
 
-    
+
     Page<ProfileDocument> findByProfileTypeAndDeletedFalseAndApprovedTrue(ProfileType profileType, Pageable pageable);
 
     Page<ProfileDocument> findByDeletedFalse(Pageable pageable);
@@ -55,4 +57,9 @@ public interface ProfileRepository extends MongoRepository<ProfileDocument, Stri
     Page<ProfileDocument> findByDepartmentAndPassingYearAndDeletedFalseAndApprovedTrue(String department, int passingYear, Pageable pageable);
 
     List<ProfileDocument> findAllByUserIdIn(List<String> userIds);
+
+    @Query(value = "{}", fields = "{ 'registrationNumber' : 1, '_id' : 0 }")
+    Collection<String> findAllRegistrationNumbers();
+
+    Collection<ProfileDocument> findAllByEmailIn(Set<String> emails);
 }
