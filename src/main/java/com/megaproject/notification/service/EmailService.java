@@ -1,7 +1,6 @@
 package com.megaproject.notification.service;
 
 import com.resend.Resend;
-import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -104,6 +103,7 @@ public class EmailService {
 
     private void sendViaResend(String to, String subject, String htmlBody) {
         try {
+            applyRateLimit();
             CreateEmailOptions params = CreateEmailOptions.builder()
                     .from(senderEmail)
                     .to(to)
@@ -111,8 +111,16 @@ public class EmailService {
                     .html(htmlBody)
                     .build();
             resend.emails().send(params);
-        } catch (ResendException e) {
+        } catch (Exception e) {
             log.error("Resend email failed → {} | {}", to, e.getMessage());
+        }
+    }
+
+    private synchronized void applyRateLimit() {
+        try {
+            Thread.sleep(800);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

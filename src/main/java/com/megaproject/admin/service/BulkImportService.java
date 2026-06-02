@@ -38,11 +38,9 @@ public class BulkImportService {
 
     private static final int BATCH_SIZE = 200;
 
-    // ── Column constants (unchanged) ───────────────────────────────────────
     private static final int COL_SR_NO=0,COL_PRN=1,COL_NAME=2,COL_GENDER=3,
             COL_DOB=4,COL_EMAIL=5,COL_PHONE=6,COL_ADDRESS=7,COL_PINCODE=8,
             COL_CITY=9,COL_DISTRICT=10,COL_STATE=11,COL_BRANCH=29,COL_YEAR_DOWN=38;
-
 
 
     public ImportResult importFromExcel(MultipartFile file) {
@@ -58,12 +56,10 @@ public class BulkImportService {
                     .stream().map(String::toLowerCase).collect(Collectors.toSet());
             Set<String> existingPrns = new HashSet<>(profileRepository.findAllRegistrationNumbers().size());
 
-            // ── Accumulate rows then bulk-insert ──────────────────────────
             List<User> usersToInsert = new ArrayList<>();
             List<ProfileDocument> profilesToInsert = new ArrayList<>();
             List<CredentialEntry> newCredentials = new ArrayList<>();
 
-            // Rows to update are processed individually (less common path)
             List<UpdateEntry> updateQueue = new ArrayList<>();
 
             for (int i = 2; i <= sheet.getLastRowNum(); i++) {
@@ -102,7 +98,6 @@ public class BulkImportService {
                     Role role          = passingYear < currentYear ? Role.ALUMNI : Role.STUDENT;
                     String location    = buildLocation(city, state);
 
-                    // ── Route to update queue or insert batch ──────────────
                     if (existingEmails.contains(email) || existingPrns.contains(prnTrimmed)) {
                         updateQueue.add(new UpdateEntry(email, prnTrimmed, cleanName(fullName),
                                 cleanPhone(phone), gender, dob, branch, admissionYear,
@@ -122,10 +117,9 @@ public class BulkImportService {
                             dob, branch, prnTrimmed, admissionYear, passingYear, pType,
                             location, address, city, state, pinCode)));
 
-                    existingEmails.add(email);   // prevent duplicates within same file
+                    existingEmails.add(email);
                     existingPrns.add(prnTrimmed);
 
-                    // ── Flush batch every BATCH_SIZE rows ─────────────────
                     if (usersToInsert.size() >= BATCH_SIZE) {
                         flushBatch(usersToInsert, newCredentials, profilesToInsert, result);
                     }
@@ -136,12 +130,10 @@ public class BulkImportService {
                 }
             }
 
-            // ── Final flush ────────────────────────────────────────────────
             if (!usersToInsert.isEmpty()) {
                 flushBatch(usersToInsert, newCredentials, profilesToInsert, result);
             }
 
-            // ── Process updates (smaller set, less frequent) ───────────────
             processUpdates(updateQueue);
 
             result.credentials.addAll(newCredentials.stream()
@@ -157,7 +149,7 @@ public class BulkImportService {
 
     private void flushBatch(List<User> users, List<CredentialEntry> creds,
                             List<ProfileDocument> profiles, ImportResult result) {
-        // OPTIMIZATION 2: insertAll instead of N individual saves
+
         List<User> saved = userRepository.saveAll(users);
 
         for (int i = 0; i < saved.size(); i++) {
@@ -169,7 +161,6 @@ public class BulkImportService {
         profileRepository.saveAll(profiles);
         result.imported += saved.size();
 
-        // OPTIMIZATION 3: Send emails asynchronously — never block the import loop
         List<CredentialEntry> batch = List.copyOf(creds);
         sendEmailsAsync(batch);
 
@@ -178,7 +169,6 @@ public class BulkImportService {
         profiles.clear();
     }
 
-    // Runs on the virtual-thread executor — completely off the import thread
     @Async("taskExecutor")
     protected void sendEmailsAsync(List<CredentialEntry> entries) {
         for (CredentialEntry e : entries) {
@@ -322,8 +312,6 @@ public class BulkImportService {
         if (state != null && !state.isBlank()) parts.add(state.trim());
         return parts.isEmpty() ? "Kolhapur, Maharashtra" : String.join(", ", parts);
     }
-
-    // ── DTOs ──────────────────────────────────────────────────────────────
 
     @Data
     public static class ImportResult {
