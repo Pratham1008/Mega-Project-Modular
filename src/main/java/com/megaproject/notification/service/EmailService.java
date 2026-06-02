@@ -14,6 +14,7 @@ import org.thymeleaf.context.Context;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @Slf4j
@@ -23,6 +24,11 @@ public class EmailService {
     private final TemplateEngine templateEngine;
     private final Resend resend;
     private final boolean useResend;
+
+    private final ReentrantLock resendLock = new ReentrantLock(true);
+    private volatile long lastResendCallMillis = 0;
+    private static final long MIN_GAP_MS = 600;
+    private static final int MAX_RETRIES = 3;
 
     @Value("${app.mail.sender-email:noreply@prathameshcorporations.site}")
     private String senderEmail;
@@ -102,25 +108,44 @@ public class EmailService {
     }
 
     private void sendViaResend(String to, String subject, String htmlBody) {
-        try {
-            applyRateLimit();
-            CreateEmailOptions params = CreateEmailOptions.builder()
-                    .from(senderEmail)
-                    .to(to)
-                    .subject(subject)
-                    .html(htmlBody)
-                    .build();
-            resend.emails().send(params);
-        } catch (Exception e) {
-            log.error("Resend email failed → {} | {}", to, e.getMessage());
-        }
-    }
+        CreateEmailOptions params = CreateEmailOptions.builder()
+                .from(senderEmail)
+                .to(to)
+                .subject(subject)
+                .html(htmlBody)
+                .build();
 
-    private synchronized void applyRateLimit() {
-        try {
-            Thread.sleep(800);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            resendLock.lock();
+            try {
+                // Wait until enough time has passed since the last call
+                long elapsed = System.currentTimeMillis() - lastResendCallMillis;
+                if (elapsed < MIN_GAP_MS) {
+                    Thread.sleep(MIN_GAP_MS - elapsed);
+                }
+                resend.emails().send(params);
+                lastResendCallMillis = System.currentTimeMillis();
+                return;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Resend email interrupted → {}", to);
+                return;
+            } catch (Exception e) {
+                lastResendCallMillis = System.currentTimeMillis();
+                if (e.getMessage() != null && e.getMessage().contains("429") && attempt < MAX_RETRIES) {
+                    long backoff = attempt * 1500L;
+                    log.warn("Resend rate-limited → {} | retry {}/{} in {}ms", to, attempt, MAX_RETRIES, backoff);
+                    try { Thread.sleep(backoff); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                } else {
+                    log.error("Resend email failed → {} | {}", to, e.getMessage());
+                    return;
+                }
+            } finally {
+                resendLock.unlock();
+            }
         }
     }
 
