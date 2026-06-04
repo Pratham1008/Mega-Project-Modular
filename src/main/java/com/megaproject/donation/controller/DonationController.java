@@ -7,11 +7,9 @@ import com.megaproject.donation.model.Donation;
 import com.megaproject.donation.repository.DonationRepository;
 import com.megaproject.donation.service.RazorpayService;
 import com.megaproject.profile.repository.ProfileRepository;
-import com.razorpay.Order;
 import com.razorpay.RazorpayException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,9 +31,6 @@ public class DonationController {
     private final RazorpayService razorpayService;
     private final com.megaproject.donation.service.DonationCampaignService campaignService;
 
-    @Value("${razorpay.key.id}")
-    private String keyId;
-
     @PostMapping("/campaign/trigger")
     public ResponseEntity<Map<String, String>> triggerCampaign(
             @RequestParam(defaultValue = "1") int phase,
@@ -52,13 +47,7 @@ public class DonationController {
     @PreAuthorize("hasRole('ALUMNI')")
     public ResponseEntity<?> createOrder(@Valid @RequestBody DonationRequest req) {
         try {
-            Order order = razorpayService.createOrder(Math.round(req.getAmount() * 100));
-            OrderResponse response = OrderResponse.builder()
-                    .orderId(order.get("id"))
-                    .amount(req.getAmount())
-                    .currency("INR")
-                    .keyId(keyId)
-                    .build();
+            OrderResponse response = razorpayService.createOrder(req.getAmount());
             return ResponseEntity.ok(response);
         } catch (RazorpayException e) {
             log.error("Failed to create Razorpay order", e);

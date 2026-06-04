@@ -1,14 +1,12 @@
 package com.megaproject.profile.service;
 
-import com.megaproject.auth.model.Role;
-import com.megaproject.auth.repository.UserRepository;
-import com.megaproject.auth.service.AuthService;
 import com.megaproject.common.util.PasswordGeneratorUtil;
-import com.megaproject.notification.service.EmailService;
 import com.megaproject.profile.dto.request.EducationalProfileRequest;
 import com.megaproject.profile.dto.request.FacultyProfileRequest;
 import com.megaproject.profile.dto.response.EducationalProfileResponse;
 import com.megaproject.profile.dto.response.FacultyProfileResponse;
+import com.megaproject.profile.event.FacultyProvisionedEvent;
+import com.megaproject.profile.event.ProfileTypeChangedEvent;
 import com.megaproject.profile.exception.ProfileAlreadyExistsException;
 import com.megaproject.profile.exception.ProfileNotFoundException;
 import com.megaproject.profile.mapper.ProfileMapper;
@@ -17,16 +15,12 @@ import com.megaproject.profile.model.ProfileType;
 import com.megaproject.profile.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 
-/**
- * Handles all WRITE operations on profiles (Command side of CQRS-lite).
- * Separated from ProfileQueryService so each class has one reason to change.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -34,13 +28,9 @@ public class ProfileCommandService {
 
     private final ProfileRepository profileRepository;
     private final ProfileMapper profileMapper;
-    private final AuthService authService;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
+    private final ProfileLookupService profileLookupService;
     private final PasswordGeneratorUtil passwordGenerator;
-
-    // ── Educational Profile ───────────────────────────────────────────────
+    private final ApplicationEventPublisher eventPublisher;
 
     public EducationalProfileResponse createEducationalProfile(EducationalProfileRequest req) {
         if (profileRepository.existsByUserId(req.getUserId()))
@@ -54,8 +44,8 @@ public class ProfileCommandService {
         doc.setProfileType(determineType(req.getPassingYear()));
         ProfileDocument saved = profileRepository.save(doc);
 
-        Role role = saved.getProfileType() == ProfileType.ALUMNI ? Role.ALUMNI : Role.STUDENT;
-        authService.updateUserRole(saved.getUserId(), role);
+        String role = saved.getProfileType() == ProfileType.ALUMNI ? "ALUMNI" : "STUDENT";
+        eventPublisher.publishEvent(new ProfileTypeChangedEvent(saved.getUserId(), role));
 
         return profileMapper.toEducationalResponse(saved);
     }
@@ -69,13 +59,11 @@ public class ProfileCommandService {
         doc.setProfileType(determineType(req.getPassingYear()));
         ProfileDocument saved = profileRepository.save(doc);
 
-        Role role = saved.getProfileType() == ProfileType.ALUMNI ? Role.ALUMNI : Role.STUDENT;
-        authService.updateUserRole(userId, role);
+        String role = saved.getProfileType() == ProfileType.ALUMNI ? "ALUMNI" : "STUDENT";
+        eventPublisher.publishEvent(new ProfileTypeChangedEvent(userId, role));
 
         return profileMapper.toEducationalResponse(saved);
     }
-
-    // ── Faculty Profile ───────────────────────────────────────────────────
 
     @PreAuthorize("hasRole('ADMIN')")
     public FacultyProfileResponse createFacultyProfile(FacultyProfileRequest req) {
@@ -84,30 +72,18 @@ public class ProfileCommandService {
             throw new ProfileAlreadyExistsException(
                     "Profile already exists for email: " + email);
 
-        var user = userRepository.findByEmail(email).orElseGet(() -> {
-            String generatedPassword = passwordGenerator.generate();
-            var newUser = com.megaproject.auth.model.User.builder()
-                    .email(email)
-                    .password(passwordEncoder.encode(generatedPassword))
-                    .role(Role.FACULTY)
-                    .verified(true)
-                    .build();
-            var savedUser = userRepository.save(newUser);
-            emailService.sendCredentialsEmail(email, req.getFullName(), generatedPassword);
-            log.info("Provisioned new Faculty account: {} (credentials sent via email)", email);
-            return savedUser;
-        });
+        String userId = profileLookupService.findOrProvisionFacultyUser(
+                email, req.getFullName(), passwordGenerator.generate());
 
         ProfileDocument doc = profileMapper.toDocument(req);
-        doc.setUserId(user.getId());
+        doc.setUserId(userId);
         doc.setEmail(email);
         doc.setProfileType(ProfileType.FACULTY);
         doc.setApproved(true);
         ProfileDocument saved = profileRepository.save(doc);
 
-        if (user.getRole() != Role.FACULTY) {
-            authService.updateUserRole(saved.getUserId(), Role.FACULTY);
-        }
+        eventPublisher.publishEvent(new ProfileTypeChangedEvent(saved.getUserId(), "FACULTY"));
+
         return profileMapper.toFacultyResponse(saved);
     }
 
@@ -117,8 +93,6 @@ public class ProfileCommandService {
         profileMapper.updateDocumentFromRequest(req, doc);
         return profileMapper.toFacultyResponse(profileRepository.save(doc));
     }
-
-    // ── Lifecycle ─────────────────────────────────────────────────────────
 
     @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.subject")
     public void deleteProfile(String userId) {
@@ -140,16 +114,14 @@ public class ProfileCommandService {
         doc.setProfileType(newType);
         ProfileDocument saved = profileRepository.save(doc);
 
-        Role role = switch (newType) {
-            case ALUMNI -> Role.ALUMNI;
-            case STUDENT -> Role.STUDENT;
-            case FACULTY -> Role.FACULTY;
+        String role = switch (newType) {
+            case ALUMNI -> "ALUMNI";
+            case STUDENT -> "STUDENT";
+            case FACULTY -> "FACULTY";
         };
-        authService.updateUserRole(userId, role);
+        eventPublisher.publishEvent(new ProfileTypeChangedEvent(userId, role));
         return profileMapper.toEducationalResponse(saved);
     }
-
-    // ── Internal helpers ──────────────────────────────────────────────────
 
     private ProfileDocument getDocumentByUserId(String userId) {
         return profileRepository.findByUserId(userId)

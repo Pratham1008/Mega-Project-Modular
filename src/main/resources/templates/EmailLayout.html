@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title th:text="${title}">KIT AlumniConnect</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f4f5f7" style="padding:40px 10px;">
+    <tr>
+        <td align="center">
+            <table width="600" border="0" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="border-radius:12px;overflow:hidden;border:1px solid #e1e3e8;box-shadow:0 8px 40px rgba(37,35,135,0.12);">
+                <tr>
+                    <td align="center" th:style="'padding:30px 20px;background:linear-gradient(135deg,#252387 0%,#3d3d9e 60%,' + (${headerColor} ?: '#6366f1') + ' 100%);'">
+                        <table border="0" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
+                            <tr>
+                                <td align="center" valign="middle">
+                                    <img src="https://www.kitcoek.in/images/Navbar/LogoVector.png" width="40" height="40" style="border-radius:10px;background:#fff;padding:4px;" alt="KIT Logo" />
+                                </td>
+                                <td align="center" valign="middle" style="padding-left:10px;">
+                                    <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">AlumniConnect</span>
+                                </td>
+                            </tr>
+                        </table>
+                        <div th:if="${not #strings.isEmpty(headerEmoji)}" style="font-size:40px;margin-bottom:8px;" th:text="${headerEmoji}"></div>
+                        <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;" th:text="${headerTitle}"></h1>
+                        <p style="margin:10px 0 0;color:#d1d5db;font-size:14px;" th:text="${headerSub}"></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="left" style="padding:40px 30px;">
+                        <th:block th:replace="${content}"></th:block>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center" bgcolor="#f8fafc" style="padding:20px 30px;border-top:1px solid #e5e7eb;">
+                        <p style="margin:0 0 4px;font-size:12px;color:#6b7280;">© 2026 KIT's College of Engineering, Kolhapur — AlumniConnect Portal</p>
+                        <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.5;" th:text="${footerNote}"></p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

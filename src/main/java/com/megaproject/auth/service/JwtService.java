@@ -1,7 +1,7 @@
 package com.megaproject.auth.service;
 
 import com.megaproject.auth.model.User;
-import com.megaproject.config.JwtConfig;
+import com.megaproject.config.security.JwtConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;

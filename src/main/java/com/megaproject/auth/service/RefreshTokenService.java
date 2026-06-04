@@ -3,7 +3,7 @@ package com.megaproject.auth.service;
 import com.megaproject.auth.exception.TokenException;
 import com.megaproject.auth.model.RefreshToken;
 import com.megaproject.auth.repository.RefreshTokenRepository;
-import com.megaproject.config.JwtConfig;
+import com.megaproject.config.security.JwtConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -1,106 +1,84 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Support Current Students — KIT AlumniConnect</title>
-</head>
-<body style="margin:0;padding:0;background:#f0f0f8;font-family:'Segoe UI',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f8;padding:40px 16px;">
-    <tr><td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(37,35,135,0.12);">
-
-            <!-- ── HEADER ── -->
-            <tr>
-                <td style="background:linear-gradient(135deg,#252387 0%,#3d3d9e 60%,#f7941d 100%);padding:36px 40px 32px;text-align:center;">
-                    <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:12px;">
-                        <img src="https://www.kitcoek.in/images/Navbar/LogoVector.png" width="40" height="40"
-                             style="border-radius:10px;background:#fff;padding:4px;" alt="KIT Logo" />
-                        <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">AlumniConnect</span>
-                    </div>
-                    <div style="font-size:40px;margin-bottom:8px;">🎓</div>
-                    <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;"
-                        th:text="${phase == 1} ? 'Give Back to KIT' : 'Still Time to Make an Impact'">Give Back to KIT</h1>
-                    <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">Your support shapes the next generation</p>
-                </td>
-            </tr>
-
-            <!-- ── BODY ── -->
-            <tr>
-                <td style="padding:40px 40px 24px;">
-                    <p style="margin:0 0 8px;font-size:17px;font-weight:700;color:#1a1c1f;">
-                        Hi <span th:text="${name}">Alumnus</span> 👋
-                    </p>
-
-                    <p th:if="${phase == 1}" style="margin:0 0 24px;font-size:14px;color:#464652;line-height:1.7;">
-                        As a proud KIT graduate, you know the value of the education you received.
-                        Today we're reaching out to ask for your support — a chance to pay it forward
-                        and help the next batch of students thrive.
-                    </p>
-                    <p th:if="${phase == 2}" style="margin:0 0 24px;font-size:14px;color:#464652;line-height:1.7;">
-                        We're following up on our earlier request. Your contribution, no matter the size,
-                        directly impacts the students walking the same halls you once did.
-                        We'd love to have you with us on this mission.
-                    </p>
-
-                    <!-- Impact Cards -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
-                        <tr>
-                            <td width="33%" style="padding:0 6px 0 0;">
-                                <div style="background:#eef0ff;border-radius:14px;padding:18px 14px;text-align:center;">
-                                    <div style="font-size:28px;margin-bottom:6px;">🎓</div>
-                                    <p style="margin:0;font-size:12px;font-weight:700;color:#252387;">Scholarships</p>
-                                    <p style="margin:4px 0 0;font-size:11px;color:#777683;line-height:1.4;">Financial aid for deserving students</p>
-                                </div>
-                            </td>
-                            <td width="33%" style="padding:0 3px;">
-                                <div style="background:#fff8e1;border-radius:14px;padding:18px 14px;text-align:center;">
-                                    <div style="font-size:28px;margin-bottom:6px;">🔬</div>
-                                    <p style="margin:0;font-size:12px;font-weight:700;color:#8c4f00;">Campus Labs</p>
-                                    <p style="margin:4px 0 0;font-size:11px;color:#777683;line-height:1.4;">Upgrade labs & learning spaces</p>
-                                </div>
-                            </td>
-                            <td width="33%" style="padding:0 0 0 6px;">
-                                <div style="background:#f0fdf4;border-radius:14px;padding:18px 14px;text-align:center;">
-                                    <div style="font-size:28px;margin-bottom:6px;">🚀</div>
-                                    <p style="margin:0;font-size:12px;font-weight:700;color:#15803d;">Tech Fests</p>
-                                    <p style="margin:4px 0 0;font-size:11px;color:#777683;line-height:1.4;">Hackathons & student events</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-
-                    <p style="margin:0;font-size:14px;color:#464652;line-height:1.7;text-align:center;font-style:italic;">
-                        "Every rupee you contribute is a step forward for a student who was once in your shoes."
-                    </p>
-                </td>
-            </tr>
-
-            <!-- ── CTA ── -->
-            <tr>
-                <td style="padding:8px 40px 36px;text-align:center;">
-                    <a href="https://alumni.prathameshcorporations.site/donations"
-                       style="display:inline-block;background:linear-gradient(135deg,#f7941d,#e8730a);color:#ffffff;text-decoration:none;font-size:16px;font-weight:800;padding:16px 44px;border-radius:99px;letter-spacing:0.3px;box-shadow:0 6px 24px rgba(247,148,29,0.4);">
-                        💛 Donate Now
-                    </a>
-                    <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">Secure payment via Razorpay · Takes less than 2 minutes</p>
-                </td>
-            </tr>
-
-            <!-- ── FOOTER ── -->
-            <tr>
-                <td style="background:#f8f8fd;border-top:1px solid #e2e2e7;padding:20px 40px;text-align:center;">
-                    <p style="margin:0 0 4px;font-size:12px;color:#777683;">
-                        © 2026 KIT's College of Engineering, Kolhapur — AlumniConnect Portal
-                    </p>
-                    <p style="margin:0;font-size:11px;color:#94a3b8;">
-                        You're receiving this because you're a registered alumni. Emails are sent at most twice per campaign.
-                    </p>
-                </td>
-            </tr>
-
-        </table>
-    </td></tr>
-</table>
-</body>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" 
+      th:replace="~{EmailLayout :: html(title='Support Current Students — KIT AlumniConnect', headerColor='#f59e0b', headerEmoji='🎓', headerTitle=${phase == 1 ? 'Give Back to KIT' : 'Still Time to Make an Impact'}, headerSub='Your support shapes the next generation', footerNote='You\'re receiving this because you\'re a registered alumni. Emails are sent at most twice per campaign.', content=~{::content})}">
+<th:block th:fragment="content">
+    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style="padding-bottom: 24px;">
+                <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#1f2937;">
+                    Hi <span th:text="${name}">Alumnus</span> 👋
+                </p>
+                <p th:if="${phase == 1}" style="margin:0;font-size:14px;color:#4b5563;line-height:1.6;">
+                    As a proud KIT graduate, you know the value of the education you received.
+                    Today we're reaching out to ask for your support &mdash; a chance to pay it forward
+                    and help the next batch of students thrive.
+                </p>
+                <p th:if="${phase == 2}" style="margin:0;font-size:14px;color:#4b5563;line-height:1.6;">
+                    We're following up on our earlier request. Your contribution, no matter the size,
+                    directly impacts the students walking the same halls you once did.
+                    We'd love to have you with us on this mission.
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td align="center" style="padding-bottom: 24px;">
+                <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td width="33%" align="center" valign="top" style="padding-right:4px;">
+                            <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f3f4f6" style="border-radius:8px;">
+                                <tr>
+                                    <td align="center" style="padding:16px 8px;">
+                                        <div style="font-size:24px;margin-bottom:8px;">🎓</div>
+                                        <p style="margin:0;font-size:12px;font-weight:700;color:#4f46e5;">Scholarships</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td width="33%" align="center" valign="top" style="padding:0 4px;">
+                            <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#fef3c7" style="border-radius:8px;">
+                                <tr>
+                                    <td align="center" style="padding:16px 8px;">
+                                        <div style="font-size:24px;margin-bottom:8px;">🔬</div>
+                                        <p style="margin:0;font-size:12px;font-weight:700;color:#d97706;">Campus Labs</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td width="33%" align="center" valign="top" style="padding-left:4px;">
+                            <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#dcfce7" style="border-radius:8px;">
+                                <tr>
+                                    <td align="center" style="padding:16px 8px;">
+                                        <div style="font-size:24px;margin-bottom:8px;">🚀</div>
+                                        <p style="margin:0;font-size:12px;font-weight:700;color:#16a34a;">Tech Fests</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding-bottom: 24px;" align="center">
+                <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.6;font-style:italic;">
+                    "Every rupee you contribute is a step forward for a student who was once in your shoes."
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td align="center">
+                <table border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td align="center" bgcolor="#f59e0b" style="border-radius:8px;">
+                            <a href="https://alumniconnect-lovat.vercel.app/donations" style="display:inline-block;padding:12px 32px;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;border:1px solid #d97706;border-radius:8px;">
+                                💛 Donate Now
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+                <p style="margin:12px 0 0;font-size:11px;color:#9ca3af;">Secure payment via Razorpay &middot; Takes less than 2 minutes</p>
+            </td>
+        </tr>
+    </table>
+</th:block>
 </html>

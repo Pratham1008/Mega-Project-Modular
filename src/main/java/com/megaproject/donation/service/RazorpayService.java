@@ -1,5 +1,6 @@
 package com.megaproject.donation.service;
 
+import com.megaproject.donation.dto.OrderResponse;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
@@ -24,12 +25,11 @@ public class RazorpayService {
 
     @PostConstruct
     public void init() throws RazorpayException {
-        
         this.razorpayClient = new RazorpayClient(keyId, keySecret);
     }
 
-    
-    public Order createOrder(long amountInPaise) throws RazorpayException {
+    public OrderResponse createOrder(double amount) throws RazorpayException {
+        long amountInPaise = Math.round(amount * 100);
         if (amountInPaise <= 0) {
             throw new IllegalArgumentException("Amount must be positive");
         }
@@ -37,10 +37,16 @@ public class RazorpayService {
         orderRequest.put("amount", amountInPaise);
         orderRequest.put("currency", "INR");
         orderRequest.put("receipt", "txn_" + System.currentTimeMillis());
-        return razorpayClient.orders.create(orderRequest);
+        Order order = razorpayClient.orders.create(orderRequest);
+
+        return OrderResponse.builder()
+                .orderId(order.get("id"))
+                .amount(amount)
+                .currency("INR")
+                .keyId(keyId)
+                .build();
     }
 
-    
     public boolean verifySignature(String orderId, String paymentId, String signature) {
         try {
             JSONObject options = new JSONObject();

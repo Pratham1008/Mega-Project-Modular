@@ -1,6 +1,6 @@
 package com.megaproject.auth.controller;
 
-import com.megaproject.config.JwtConfig;
+import com.megaproject.config.security.JwtConfig;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import lombok.RequiredArgsConstructor;

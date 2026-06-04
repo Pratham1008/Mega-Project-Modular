@@ -19,8 +19,19 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestControllerAdvice(basePackages = "com.megaproject")
 public class GlobalExceptionHandler {
+
+    // ── Global Catch-All ──────────────────────────────────────────────
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleAllUncaughtException(Exception ex, HttpServletRequest req) {
+        log.error("Internal Server Error: ", ex);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected internal error occurred.", req.getRequestURI());
+    }
 
     // ── Auth exceptions ──────────────────────────────────────────────
 

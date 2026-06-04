@@ -14,7 +14,8 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 @EnableMongoRepositories(basePackages = {
         "com.megaproject.auth.repository",
         "com.megaproject.profile.repository",
-        "com.megaproject.jobevent.repository",
+        "com.megaproject.job.repository",
+        "com.megaproject.event.repository",
         "com.megaproject.chat.repository",
         "com.megaproject.donation.repository",
         "com.megaproject.stories.repository",
