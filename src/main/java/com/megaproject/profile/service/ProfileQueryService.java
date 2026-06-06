@@ -23,11 +23,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Handles all READ operations on profiles (Query side of CQRS-lite).
- * No write operations, no auth mutations, no email sending.
- * Cacheable methods live here because caching is a read concern.
- */
 @Service
 @RequiredArgsConstructor
 public class ProfileQueryService {
@@ -73,11 +68,7 @@ public class ProfileQueryService {
                 .map(profileMapper::toSummary);
     }
 
-    /**
-     * Returns typed ProfileMapResponse instead of raw ProfileDocument.
-     * Keeps domain internals out of the controller.
-     */
-    public Page<ProfileMapResponse> getMapProfiles(ProfileType type, Pageable pageable) {
+        public Page<ProfileMapResponse> getMapProfiles(ProfileType type, Pageable pageable) {
         return profileRepository.findProfilesWithLocationPaged(type, pageable)
                 .map(this::toMapResponse);
     }
@@ -102,7 +93,7 @@ public class ProfileQueryService {
         return Map.of("alumni", alumni, "student", student, "faculty", faculty, "total", total);
     }
 
-    // ── Internal helpers ──────────────────────────────────────────────────
+    
 
     private ProfileDocument getDocumentByUserId(String userId) {
         return profileRepository.findByUserId(userId)

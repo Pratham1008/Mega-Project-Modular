@@ -50,7 +50,6 @@ public class ChatService {
         return messageRepo.findByConversationIdOrderBySentAtAsc(conversationId, PageRequest.of(page, size));
     }
 
-    // OPTIMIZED: single updateOne on conversation instead of findById + save
     public ChatMessage saveMessage(String conversationId, String senderId,
                                    String senderName, String senderPhoto, String content) {
         ChatMessage msg = ChatMessage.builder()
@@ -77,10 +76,8 @@ public class ChatService {
                                      String senderName, String senderPhoto, String content) {
         ChatMessage saved = saveMessage(conversationId, senderId, senderName, senderPhoto, content);
 
-        // Broadcast via WebSocket for web clients
         broker.convertAndSend("/topic/conversation/" + conversationId, saved);
 
-        // Send push notifications and WS notifications to other participants
         getConversationById(conversationId).ifPresent(conv -> {
             String preview = saved.getContent().length() > 60
                     ? saved.getContent().substring(0, 60) + "…"

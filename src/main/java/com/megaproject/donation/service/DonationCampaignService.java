@@ -31,14 +31,12 @@ public class DonationCampaignService {
     private static final int EMAIL_BATCH_SIZE = 50;
     private static final long BATCH_DELAY_MS = 500L;
 
-    // Run on the 1st of every month at 10 AM (Phase 1)
     @Scheduled(cron = "0 0 10 1 * ?")
     public void runPhase1Campaign() {
         log.info("Starting Phase 1 Donation Campaign...");
         runCampaignForPhaseAsync(1);
     }
 
-    // Run on the 8th of every month at 10 AM (Phase 2 - Follow-up)
     @Scheduled(cron = "0 0 10 8 * ?")
     public void runPhase2Campaign() {
         log.info("Starting Phase 2 Donation Campaign (Follow-up)...");
@@ -56,7 +54,6 @@ public class DonationCampaignService {
     }
 
     public void runCampaignForPhase(int phase) {
-        // 1. Send FCM Push Notification via topic (single broadcast instead of per-user)
         String title = phase == 1 ? "Support Current Students \uD83C\uDF93" : "Reminder: We Still Need Your Support \u2764\uFE0F";
         String body = "Your contribution helps fund scholarships and improve campus facilities at KIT.";
         fcmService.sendToTopic("all", title, body, Map.of(
@@ -64,11 +61,9 @@ public class DonationCampaignService {
                 "phase", String.valueOf(phase)
         ));
 
-        // 2. Stream emails using MongoDB cursor — constant O(1) memory
         Query query = new Query(Criteria.where("profileType").is(ProfileType.ALUMNI)
                 .and("deleted").is(false)
                 .and("email").ne(null));
-        // Only fetch fields we need
         query.fields().include("email", "fullName");
 
         int emailsSent = 0;
@@ -85,7 +80,6 @@ public class DonationCampaignService {
                     batch.clear();
                     batchCount++;
 
-                    // Add delay between batches to avoid overwhelming the email service
                     try {
                         Thread.sleep(BATCH_DELAY_MS);
                     } catch (InterruptedException e) {
@@ -96,7 +90,6 @@ public class DonationCampaignService {
                 }
             }
 
-            // Send remaining partial batch
             if (!batch.isEmpty()) {
                 emailsSent += sendEmailBatch(batch, phase);
             }

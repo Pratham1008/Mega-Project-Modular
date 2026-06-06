@@ -10,12 +10,6 @@ import org.springframework.stereotype.Controller;
 
 import java.util.Map;
 
-/**
- * WebSocket STOMP message handlers.
- * REST endpoints live in ChatRestController.
- * Keeping them separate avoids confusion about routing and
- * makes each class testable in isolation.
- */
 @Controller
 @RequiredArgsConstructor
 public class ChatWebSocketController {

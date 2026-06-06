@@ -4,10 +4,6 @@ import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 
-/**
- * Shared password generator — extracted from ProfileService and BulkImportService
- * to eliminate duplication. Single source of truth for credential generation.
- */
 @Component
 public class PasswordGeneratorUtil {
 

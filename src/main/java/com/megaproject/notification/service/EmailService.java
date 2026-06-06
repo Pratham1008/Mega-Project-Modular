@@ -118,7 +118,6 @@ public class EmailService {
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             resendLock.lock();
             try {
-                // Wait until enough time has passed since the last call
                 long elapsed = System.currentTimeMillis() - lastResendCallMillis;
                 if (elapsed < MIN_GAP_MS) {
                     Thread.sleep(MIN_GAP_MS - elapsed);

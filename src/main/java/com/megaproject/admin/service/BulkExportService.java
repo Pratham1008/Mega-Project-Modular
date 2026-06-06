@@ -5,7 +5,7 @@ import com.megaproject.profile.model.ProfileDocument;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;   // ← streaming API; low memory
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -81,10 +81,7 @@ public class BulkExportService {
         }
     }
 
-    /**
-     * Export a pre-filtered list of search results to Excel.
-     * Uses a slimmer column set since search results don't carry all profile fields.
-     */
+
     public byte[] exportFilteredToExcel(List<AlumniSearchResponse> results) throws IOException {
 
         try (SXSSFWorkbook workbook = new SXSSFWorkbook(100);
@@ -137,7 +134,7 @@ public class BulkExportService {
         row.createCell(col++).setCellValue(addr != null ? str(addr.getStreet()) : "");
         row.createCell(col++).setCellValue(addr != null ? str(addr.getPostalCode()) : "");
         row.createCell(col++).setCellValue(addr != null ? str(addr.getCity()) : "");
-        row.createCell(col++).setCellValue(""); // district not stored separately
+        row.createCell(col++).setCellValue("");
         row.createCell(col++).setCellValue(addr != null ? str(addr.getState()) : "");
         row.createCell(col++).setCellValue(str(p.getDepartment()));
         row.createCell(col++).setCellValue(p.getProfileType() != null ? p.getProfileType().name() : "");

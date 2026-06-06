@@ -25,15 +25,11 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice(basePackages = "com.megaproject")
 public class GlobalExceptionHandler {
 
-    // ── Global Catch-All ──────────────────────────────────────────────
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAllUncaughtException(Exception ex, HttpServletRequest req) {
         log.error("Internal Server Error: ", ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected internal error occurred.", req.getRequestURI());
     }
-
-    // ── Auth exceptions ──────────────────────────────────────────────
 
     @ExceptionHandler(EmailAlreadyInUseException.class)
     public ResponseEntity<ErrorResponse> handleEmailConflict(EmailAlreadyInUseException ex, HttpServletRequest req) {
@@ -50,8 +46,6 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), req.getRequestURI());
     }
 
-    // ── Profile exceptions ───────────────────────────────────────────
-
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleProfileNotFound(ProfileNotFoundException ex, HttpServletRequest req) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), req.getRequestURI());
@@ -66,8 +60,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnauthorizedProfile(UnauthorizedProfileAccessException ex, HttpServletRequest req) {
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), req.getRequestURI());
     }
-
-    // ── Common / shared exceptions ───────────────────────────────────
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest req) {
@@ -97,14 +89,10 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI());
     }
 
-    // ── Chat exceptions ──────────────────────────────────────────────
-
     @ExceptionHandler(NotConnectedException.class)
     public ResponseEntity<ErrorResponse> handleNotConnected(NotConnectedException ex, HttpServletRequest req) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI());
     }
-
-    // ── Helper ───────────────────────────────────────────────────────
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, String path) {
         return ResponseEntity.status(status).body(new ErrorResponse(

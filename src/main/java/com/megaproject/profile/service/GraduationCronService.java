@@ -38,7 +38,7 @@ public class GraduationCronService {
             return;
         }
 
-        // Bulk update profile types in MongoDB
+        
         BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.UNORDERED, ProfileDocument.class);
         List<String> userIds = new ArrayList<>();
 
@@ -56,7 +56,7 @@ public class GraduationCronService {
             log.error("Bulk profile update failed", e);
         }
 
-        // Bulk update user roles in MongoDB (single round trip instead of N)
+        
         try {
             BulkOperations userBulkOps = mongoTemplate.bulkOps(
                     BulkOperations.BulkMode.UNORDERED, "users");

@@ -16,10 +16,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * Intercepts STOMP CONNECT frames to authenticate via Authorization header.
- * This supports SockJS fallback transports that can't send HTTP-level headers.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -41,7 +37,6 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                     Jwt jwt = jwtDecoder.decode(token);
                     String userId = jwt.getSubject();
 
-                    // Store in session attributes for use by @MessageMapping handlers
                     Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
                     if (sessionAttrs != null) {
                         sessionAttrs.put("userId", userId);

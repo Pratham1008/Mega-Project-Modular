@@ -45,7 +45,6 @@ public class FcmService {
         tokenRepo.deleteByToken(token);
     }
 
-    // OPTIMIZED: MulticastMessage sends to up to 500 tokens in one FCM call
     @Async
     public void sendToUser(String userId, String title, String body, Map<String, String> data) {
         if (firebaseMessaging == null) return;
@@ -53,7 +52,6 @@ public class FcmService {
         if (tokens.isEmpty()) return;
 
         List<String> tokenStrings = tokens.stream().map(FcmToken::getToken).toList();
-        // FCM supports up to 500 tokens per multicast
         for (int i = 0; i < tokenStrings.size(); i += 500) {
             List<String> batch = tokenStrings.subList(i, Math.min(i + 500, tokenStrings.size()));
             try {
@@ -64,7 +62,6 @@ public class FcmService {
                         .build();
                 BatchResponse response = firebaseMessaging.sendEachForMulticast(message);
 
-                // Clean up invalid tokens
                 if (response.getFailureCount() > 0) {
                     List<SendResponse> responses = response.getResponses();
                     List<String> toDelete = new ArrayList<>();

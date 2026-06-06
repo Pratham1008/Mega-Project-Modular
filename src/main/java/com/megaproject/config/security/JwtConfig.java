@@ -64,10 +64,7 @@ public class JwtConfig {
         }
     }
 
-    /**
-     * Strips PEM header/footer lines and whitespace so only the Base64 payload remains.
-     */
-    private String stripPemHeaders(String pem) {
+        private String stripPemHeaders(String pem) {
         return pem
                 .replace("-----BEGIN PUBLIC KEY-----", "")
                 .replace("-----END PUBLIC KEY-----", "")

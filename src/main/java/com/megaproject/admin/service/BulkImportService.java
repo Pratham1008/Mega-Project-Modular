@@ -242,7 +242,6 @@ public class BulkImportService {
                 .build();
     }
 
-    // ── Cell helpers (unchanged) ───────────────────────────────────────────
 
     private boolean isRowEmpty(Row row) {
         for (int c = 0; c < 10; c++) {
@@ -327,7 +326,6 @@ public class BulkImportService {
     @Data @AllArgsConstructor
     public static class CredentialEntry {
         String email; String password;
-        // Extra fields used only during processing, not serialised in response
         transient String displayName;
         transient ProfileDocument profileTemplate;
         public CredentialEntry(String email, String password) { this(email, password, null, null); }

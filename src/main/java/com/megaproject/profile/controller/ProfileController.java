@@ -24,10 +24,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Thin HTTP adapter — routes requests to the correct service.
- * No repository injection, no business logic, no data mapping.
- */
 @RestController
 @RequestMapping("/profiles")
 @RequiredArgsConstructor

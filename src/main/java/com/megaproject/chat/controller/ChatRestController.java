@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * HTTP REST endpoints for the chat feature.
- * WebSocket @MessageMapping handlers live in ChatWebSocketController.
- */
 @RestController
 @RequestMapping("/chat")
 @RequiredArgsConstructor

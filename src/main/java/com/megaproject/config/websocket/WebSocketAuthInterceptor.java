@@ -71,7 +71,6 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
     }
 
     private String extractToken(ServerHttpRequest request) {
-        // Priority 1: Check Authorization header (secure method)
         String authHeader = request.getHeaders().getFirst("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
@@ -80,13 +79,11 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
             }
         }
 
-        // Priority 2: Check custom X-Auth-Token header (for SockJS/STOMP)
         String customHeader = request.getHeaders().getFirst("X-Auth-Token");
         if (customHeader != null && !customHeader.isBlank()) {
             return customHeader;
         }
 
-        // Priority 3: Fallback to query param (deprecated — for old clients during migration)
         if (request instanceof ServletServerHttpRequest servletReq) {
             String token = servletReq.getServletRequest().getParameter("token");
             if (token != null && !token.isBlank()) {
